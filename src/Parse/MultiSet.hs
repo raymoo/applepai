@@ -28,7 +28,7 @@ import           Control.Applicative (Alternative, Applicative, empty, pure,
                                       (<$>), (<*>), (<|>))
 import           Control.Arrow       (first)
 import qualified Data.Foldable       as F
-import           Data.Maybe          (catMaybes)
+import           Data.Maybe          (mapMaybe)
 import qualified Data.MultiSet       as MS
 import qualified Data.Set            as S
 
@@ -92,7 +92,7 @@ nOf n x = MultiParser $ \ms ->
 -- | count n p parses n occurences of p
 count :: Int -> MultiParser a a -> MultiParser a [a]
 count 0 _ = pure []
-count n p = (:) <$> p  <*> (count (n - 1) p)
+count n p = (:) <$> p  <*> count (n - 1) p
 
 -- | For each unique value, try a parse
 forValues :: (a -> MultiParser a b) -> MultiParser a b
@@ -103,4 +103,4 @@ forValues f = MultiParser $ \ms ->
 forFilteredValues :: (a -> Maybe (MultiParser a b)) -> MultiParser a b
 forFilteredValues p = MultiParser $ \ms ->
   flip runParser ms .
-  F.foldr (<|>) empty . catMaybes . map p . MS.distinctElems $ ms
+  F.foldr (<|>) empty . mapMaybe p . MS.distinctElems $ ms

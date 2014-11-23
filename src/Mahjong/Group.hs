@@ -56,10 +56,10 @@ data GroupType = Pair
                | Kantsu
 
 groupType :: Group -> GroupType
-groupType (Atama _ _)    = Pair
-groupType (Shun _ _ _)   = Shuntsu
-groupType (Kou _ _ _)    = Koutsu
-groupType (Kan _ _ _ _)  = Kantsu
+groupType Atama{} = Pair
+groupType Shun{}  = Shuntsu
+groupType Kou{}   = Koutsu
+groupType Kan{}   = Kantsu
 
 atama :: Tile -> Tile -> Maybe Group
 atama t@(Man n) t2@(Man n2)
@@ -128,26 +128,26 @@ getGroupTiles = toListOf groupTiles
 
 -- | Gets the number of 'Tile's in a 'Group'
 getTileCount :: Group -> Int
-getTileCount (Atama _ _)   = 2
-getTileCount (Shun _ _ _)  = 3
-getTileCount (Kou _ _ _)   = 3
-getTileCount (Kan _ _ _ _) = 4
+getTileCount Atama{} = 2
+getTileCount Shun{}  = 3
+getTileCount Kou{}   = 3
+getTileCount Kan{}   = 4
 
 -- | Parses a Kou
 kouParser :: MultiParser Tile Group
-kouParser = fmap listToKou $ forValues (nOf 3)
+kouParser = listToKou <$> forValues (nOf 3)
    -- unsafe! Relies on there always being three matching tiles
   where listToKou (t:t':t'':_) = Kou t t' t''
 
 -- | Parses a kan
 kanParser :: MultiParser Tile Group
-kanParser = fmap listToKan $ forValues (nOf 4)
+kanParser = listToKan <$> forValues (nOf 4)
   -- same as above
   where listToKan (t:t':t'':t''':_) = Kan t t' t'' t'''
 
 -- | Parses a pair
 atamaParser :: MultiParser Tile Group
-atamaParser = fmap listToAtama $ forValues (nOf 2)
+atamaParser = listToAtama <$> forValues (nOf 2)
   where listToAtama (t:t':_) = Atama t t'
 
 -- | Parses a Shun
@@ -158,7 +158,7 @@ shunParser = forFilteredValues checkNum
           where advance :: Tile -> Int -> MultiParser Tile Tile
                 advance t' n = satisfy (\t'' ->
                                          t''^.tileSuit == t'^.tileSuit &&
-                                         t''^..tileNum == t'^..tileNum.(to $ succN n))
+                                         t''^..tileNum == t'^..tileNum.to (succN n))
                 t2 = advance t 1
                 t3 = advance t 2
         succN 0 x = x
