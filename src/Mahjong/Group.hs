@@ -72,6 +72,7 @@ atama t t2
     | t == t2 = Just $ Atama t t2
 atama _ _ = Nothing
 
+-- | Requires the tiles be in ascending order
 shun :: Tile -> Tile -> Tile -> Maybe Group
 shun t t2 t3
     | suitsEqual && successive = Just $ Shun t t2 t3
