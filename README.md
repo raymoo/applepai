@@ -14,3 +14,6 @@ probably inefficient, I wouldn't recommend using it outside of this. Please let
 me know if there is already a decent similar library that I can use instead.
 I'm pretty sure there is a problem with the Applicative instance too, since
 trying to use ''many'' (or ''some'') results in bottom.
+
+In the future I hope to have modules providing modelling of table state, player
+moves, and scoring (not necessarily in that order), with flexible rules of play.
