@@ -37,6 +37,7 @@ module Mahjong.Group(
 
 import           Control.Applicative ((<$>), (<*>))
 import           Control.Lens
+import           Data.List           (intercalate)
 import           Data.Maybe          (isJust)
 import qualified Data.MultiSet       as MS
 import           Mahjong.Tile
@@ -47,7 +48,10 @@ data Group = Atama Tile Tile -- ^ Pair
            | Shun Tile Tile Tile
            | Kou Tile Tile Tile
            | Kan Tile Tile Tile Tile
-             deriving (Show, Eq, Ord)
+             deriving (Eq, Ord)
+
+instance Show Group where
+  show g = intercalate "-" $ g^..groupTiles.(to show)
 
 -- | The different kinds of tile groups
 data GroupType = Pair
