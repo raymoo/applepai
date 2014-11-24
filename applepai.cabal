@@ -54,6 +54,7 @@ library
     Mahjong.Tile
     Mahjong.Group
     Parse.MultiSet
+    Mahjong.Player
   
   ghc-options: -O2 -Wall -fwarn-tabs
   -- Modules included in this library but not exported.
