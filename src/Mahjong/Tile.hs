@@ -32,6 +32,7 @@ module Mahjong.Tile (
 
 import           Control.Applicative (Applicative, (<$>), pure)
 import           Control.Lens
+import           Data.Char (chr)
 
 -- | Mahjong tile values
 
@@ -44,20 +45,20 @@ data Tile = -- | Manzu
             -- | Dragons
           | DGreen | DRed | DWhite
             -- | Winds
-          | E | S | N | W
+          | E | S | W | N
             deriving (Eq, Ord)
 
 instance Show Tile where
-  show (Man n) = 'M' : show n
-  show (Sou n) = 'S' : show n
-  show (Pin n) = 'P' : show n
-  show DGreen  = "Green"
-  show DRed    = "Red"
-  show DWhite  = "White"
-  show E       = "E"
-  show S       = "S"
-  show N       = "N"
-  show W       = "W"
+  show (Man n) = [chr $ fromEnum n + 0x1F007]
+  show (Sou n) = [chr $ fromEnum n + 0x1F010]
+  show (Pin n) = [chr $ fromEnum n + 0x1F019]
+  show DGreen  = "\x1F005"
+  show DRed    = "\x1F004"
+  show DWhite  = "\x1F006"
+  show E       = "\x1F000"
+  show S       = "\x1F001"
+  show N       = "\x1F003"
+  show W       = "\x1F002"
 
 -- Constants for the Enum instance
 souOffset, pinOffset, honOffset :: Int
@@ -74,8 +75,8 @@ instance Enum Tile where
     fromEnum DWhite  = honOffset + 2
     fromEnum E       = honOffset + 3
     fromEnum S       = honOffset + 4
-    fromEnum N       = honOffset + 5
-    fromEnum W       = honOffset + 6
+    fromEnum W       = honOffset + 5
+    fromEnum N       = honOffset + 6
     toEnum n = case n `div` 9 of
                  0 -> Man numInt
                  1 -> Sou numInt
@@ -87,12 +88,12 @@ instance Enum Tile where
               toHonor 29 = DWhite
               toHonor 30 = E
               toHonor 31 = S
-              toHonor 32 = N
-              toHonor 33 = W
+              toHonor 32 = W
+              toHonor 33 = N
 
 instance Bounded Tile where
     minBound = Man One
-    maxBound = W
+    maxBound = N
 
 -- | Possible numerical value of tiles ('Honor' for honors)
 data TNumber = One | Two | Three | Four | Five | Six | Seven | Eight | Nine
