@@ -27,6 +27,7 @@ import Parse.MultiSet
 import Control.Lens
 import Control.Applicative((<$>))
 import Data.Monoid (Sum(..))
+import Data.List   (intercalate)
 import qualified Data.MultiSet      as MS
 import qualified Data.IntMap.Strict as IM
 
@@ -36,20 +37,31 @@ data Seat = East
           | North
           deriving (Eq, Ord, Enum, Bounded, Show)
 
-data Player = Player { _hand  :: Hand
-                     , _wind  :: Seat
-                     , _river :: MS.MultiSet Tile
-                     } deriving (Show)
 
 -- | Represents a hand of tiles a player might have
 data Hand =
   Hand { _newTile      :: Maybe Tile      -- ^ newly-drawn 'Tile'
        , _closedTiles  :: IM.IntMap Tile  -- ^ Normal tiles
-       , _openGroups   :: [Group]         -- ^ Open groups
+       , _openGroups   :: [(Group, Seat)] -- ^ Open groups + the seat they got the tile from
        , _closedGroups :: [Group]         -- ^ Closed groups (ie kan)
-       } deriving (Show)
-
+       }
 makeLenses ''Hand
+
+instance Show Hand where
+  show h =  (intercalate " " (h^..closedTiles.traversed.to show) ++
+             " | " ++
+             maybe "" show (h^.newTile) ++
+             " | " ++
+             intercalate " " (h^..openGroups.traversed._1.to show) ++
+             " | " ++
+             intercalate " " (h^..closedGroups.traversed.to show))
+
+
+data Player = Player { _hand  :: Hand
+                     , _wind  :: Seat
+                     , _river :: MS.MultiSet Tile
+                     } deriving (Show)
+
 makeLenses ''Player
 
 getHandTiles :: Hand -> [Tile]
@@ -58,7 +70,7 @@ getHandTiles h = h^..handTiles
 -- | 'Fold' for the 'Tile's in a hand
 handTiles :: Fold Hand Tile
 handTiles = folding (\h -> h^..closedTiles.traversed ++
-                           h^..openGroups.traversed.groupTiles ++
+                           h^..openGroups.traversed._1.groupTiles ++
                            h^..closedGroups.traversed.groupTiles ++
                            h^..newTile.traversed
                            )
@@ -67,7 +79,7 @@ handTiles = folding (\h -> h^..closedTiles.traversed ++
 wellFormed :: Hand -> Bool
 wellFormed h = cTNum + oGNum + cGNum == (12 :: Int)
   where cTNum = countOf (closedTiles.folded) h
-        oGNum = countOf (openGroups.traversed.groupTiles) h
+        oGNum = countOf (openGroups.traversed._1.groupTiles) h
         cGNum = countOf (closedGroups.traversed.groupTiles) h
         countOf l = getSum . foldMapOf l (const (Sum 1))
 
