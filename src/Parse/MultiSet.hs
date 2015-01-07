@@ -30,7 +30,7 @@ import           Control.Arrow       (first)
 import qualified Data.Foldable       as F
 import           Data.Maybe          (mapMaybe)
 import qualified Data.MultiSet       as MS
-import qualified Data.Set            as S
+
 
 data MultiParser a b =
     MultiParser { _runParser :: MS.MultiSet a -> [(b, MS.MultiSet a)] }

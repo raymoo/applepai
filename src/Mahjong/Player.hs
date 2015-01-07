@@ -93,8 +93,8 @@ discard (Just i)  p = do
              & hand.newTile .~ Nothing
 
 testHand :: Hand
-testHand = Hand { _newTile = Just E
-                , _closedTiles = IM.fromList $ [1..] `zip` replicate 12 (Sou Six)
+testHand = Hand { _newTile = Just $ Wind E
+                , _closedTiles = IM.fromList $ [1..] `zip` replicate 12 (NumT Sou Six)
                 , _openGroups  = []
                 , _closedGroups = []
                 } 
@@ -102,5 +102,5 @@ testHand = Hand { _newTile = Just E
 testPlayer :: Player
 testPlayer = Player { _hand  = testHand
                     , _wind  = South
-                    , _river = MS.fromList $ [Sou Seven, Sou Eight]
+                    , _river = MS.fromList $ [NumT Sou Seven, NumT Sou Eight]
                     }

@@ -65,12 +65,9 @@ groupType Kou{}   = Koutsu
 groupType Kan{}   = Kantsu
 
 atama :: Tile -> Tile -> Maybe Group
-atama t@(Man n) t2@(Man n2)
-    | n == n2 = Just $ Atama t t2
-atama t@(Sou n) t2@(Sou n2)
-    | n == n2 = Just $ Atama t t2
-atama t@(Pin n) t2@(Pin n2)
-    | n == n2 = Just $ Atama t t2
+atama t@(NumT s n) t2@(NumT s2 n2)
+    | n == n2 &&
+      s == s2    = Just $ Atama t t2
 atama t t2
     | t == t2 = Just $ Atama t t2
 atama _ _ = Nothing
@@ -93,33 +90,24 @@ shun t t2 t3
                        num3 == fmap succ num2
 
 kou :: Tile -> Tile -> Tile -> Maybe Group
-kou t@(Man n) t2@(Man n2) t3@(Man n3)
+kou t@(NumT s n) t2@(NumT s2 n2) t3@(NumT s3 n3)
     | n  == n2 &&
-      n2 == n3 = Just $ Kou t t2 t3
-kou t@(Sou n) t2@(Sou n2) t3@(Sou n3)
-    | n  == n2 &&
-      n2 == n3 = Just $ Kou t t2 t3
-kou t@(Pin n) t2@(Pin n2) t3@(Pin n3)
-    | n  == n2 &&
-      n2 == n3 = Just $ Kou t t2 t3
+      n2 == n3 &&
+      s  == s2 &&
+      s2 == s3    = Just $ Kou t t2 t3
 kou t t2 t3
     | t  == t2 &&
       t2 == t3 = Just $ Kou t t2 t3
 kou _ _ _ = Nothing
 
 kan :: Tile -> Tile -> Tile -> Tile -> Maybe Group
-kan t@(Man n) t2@(Man n2) t3@(Man n3) t4@(Man n4)
+kan t@(NumT s n) t2@(NumT s2 n2) t3@(NumT s3 n3) t4@(NumT s4 n4)
     | n  == n2 &&
       n2 == n3 &&
-      n3 == n4 = Just $ Kan t t2 t3 t4
-kan t@(Sou n) t2@(Sou n2) t3@(Sou n3) t4@(Sou n4)
-    | n  == n2 &&
-      n2 == n3 &&
-      n3 == n4 = Just $ Kan t t2 t3 t4
-kan t@(Pin n) t2@(Pin n2) t3@(Pin n3) t4@(Pin n4)
-    | n  == n2 &&
-      n2 == n3 &&
-      n3 == n4 = Just $ Kan t t2 t3 t4
+      n3 == n4 &&
+      s  == s2 &&
+      s2 == s3 &&
+      s3 == s4    = Just $ Kan t t2 t3 t4
 kan t t2 t3 t4
     | t  == t2 &&
       t2 == t3 &&
