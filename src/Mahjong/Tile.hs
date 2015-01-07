@@ -60,41 +60,6 @@ instance Show Tile where
   show N       = "\x1F003"
   show W       = "\x1F002"
 
--- Constants for the Enum instance
-souOffset, pinOffset, honOffset :: Int
-souOffset = 9
-pinOffset = souOffset + 9
-honOffset = pinOffset + 9
-
-instance Enum Tile where
-    fromEnum (Man n) = fromEnum n
-    fromEnum (Sou n) = fromEnum n + souOffset
-    fromEnum (Pin n) = fromEnum n + pinOffset
-    fromEnum DGreen  = honOffset
-    fromEnum DRed    = honOffset + 1
-    fromEnum DWhite  = honOffset + 2
-    fromEnum E       = honOffset + 3
-    fromEnum S       = honOffset + 4
-    fromEnum W       = honOffset + 5
-    fromEnum N       = honOffset + 6
-    toEnum n = case n `div` 9 of
-                 0 -> Man numInt
-                 1 -> Sou numInt
-                 2 -> Pin numInt
-                 _ -> toHonor n
-        where numInt = toEnum $ n `mod` 9
-              toHonor 27 = DGreen
-              toHonor 28 = DRed
-              toHonor 29 = DWhite
-              toHonor 30 = E
-              toHonor 31 = S
-              toHonor 32 = W
-              toHonor 33 = N
-
-instance Bounded Tile where
-    minBound = Man One
-    maxBound = N
-
 -- | Possible numerical value of tiles ('Honor' for honors)
 data TNumber = One | Two | Three | Four | Five | Six | Seven | Eight | Nine
                deriving (Eq, Ord, Enum, Bounded)
@@ -145,9 +110,15 @@ makeSuitNumTile _     _ = E     -- failure
 getNumTiles :: Maybe TNumber -> [Tile]
 getNumTiles n = filter ((== n) . getTileNum) everyTile
 
+
 -- | All defined 'Tile's
 everyTile :: [Tile]
-everyTile = [minBound..maxBound]
+everyTile = manTiles ++ souTiles ++ pinTiles ++ honorTiles
+  where nums = [minBound..maxBound]
+        manTiles = map Man nums
+        souTiles = map Sou nums
+        pinTiles = map Pin nums
+        honorTiles = [DGreen,DRed,DWhite,E,S,W,N]
 
 -- | 'Traversal' for the 'TNumber' of a 'Tile' (focus on 0 or 1)
 tileNum :: Traversal Tile Tile TNumber TNumber
