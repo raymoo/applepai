@@ -23,9 +23,7 @@ module Mahjong.Player (
 
 import Mahjong.Group
 import Mahjong.Tile
-import Parse.MultiSet
 import Control.Lens
-import Control.Applicative((<$>))
 import Data.Monoid (Sum(..))
 import Data.List   (intercalate)
 import qualified Data.MultiSet      as MS

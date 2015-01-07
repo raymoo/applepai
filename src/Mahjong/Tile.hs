@@ -32,7 +32,7 @@ module Mahjong.Tile (
 
 import           Control.Applicative (Applicative, (<$>), pure)
 import           Control.Lens
-import           Data.Char (chr)
+
 
 -- | Mahjong tile values
 

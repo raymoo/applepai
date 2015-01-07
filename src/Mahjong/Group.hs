@@ -39,7 +39,6 @@ import           Control.Applicative ((<$>), (<*>))
 import           Control.Lens
 import           Data.List           (intercalate)
 import           Data.Maybe          (isJust)
-import qualified Data.MultiSet       as MS
 import           Mahjong.Tile
 import           Parse.MultiSet
 
