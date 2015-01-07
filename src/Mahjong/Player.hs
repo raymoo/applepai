@@ -104,5 +104,5 @@ testHand = Hand { _newTile = Just E
 testPlayer :: Player
 testPlayer = Player { _hand  = testHand
                     , _wind  = South
-                    , _river = MS.empty
+                    , _river = MS.fromList $ [Sou Seven, Sou Eight]
                     }
