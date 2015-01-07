@@ -49,16 +49,55 @@ data Tile = -- | Manzu
             deriving (Eq, Ord)
 
 instance Show Tile where
-  show (Man n) = [chr $ fromEnum n + 0x1F007]
-  show (Sou n) = [chr $ fromEnum n + 0x1F010]
-  show (Pin n) = [chr $ fromEnum n + 0x1F019]
-  show DGreen  = "\x1F005"
-  show DRed    = "\x1F004"
-  show DWhite  = "\x1F006"
-  show E       = "\x1F000"
-  show S       = "\x1F001"
-  show N       = "\x1F003"
-  show W       = "\x1F002"
+  show (Man n) = 'M' : show n -- [chr $ fromEnum n + 0x1F007]
+  show (Sou n) = 'S' : show n -- [chr $ fromEnum n + 0x1F010]
+  show (Pin n) = 'P' : show n -- [chr $ fromEnum n + 0x1F019]
+  show DGreen  = "發" -- "\x1F005"
+  show DRed    = "中" -- "\x1F004"
+  show DWhite  = "白" -- "\x1F006"
+  show E       = "東" -- "\x1F000"
+  show S       = "南" -- "\x1F001"
+  show N       = "北" -- "\x1F003"
+  show W       = "西" -- "\x1F002"
+
+{-
+-- Constants for the Enum instance
+souOffset, pinOffset, honOffset :: Int
+souOffset = 9
+pinOffset = souOffset + 9
+honOffset = pinOffset + 9
+
+
+instance Enum Tile where
+    fromEnum (Man n) = fromEnum n
+    fromEnum (Sou n) = fromEnum n + souOffset
+    fromEnum (Pin n) = fromEnum n + pinOffset
+    fromEnum DGreen  = honOffset
+    fromEnum DRed    = honOffset + 1
+    fromEnum DWhite  = honOffset + 2
+    fromEnum E       = honOffset + 3
+    fromEnum S       = honOffset + 4
+    fromEnum W       = honOffset + 5
+    fromEnum N       = honOffset + 6
+    toEnum n = case n `div` 9 of
+                 0 -> Man numInt
+                 1 -> Sou numInt
+                 2 -> Pin numInt
+                 _ -> toHonor n
+        where numInt = toEnum $ n `mod` 9
+              toHonor 27 = DGreen
+              toHonor 28 = DRed
+              toHonor 29 = DWhite
+              toHonor 30 = E
+              toHonor 31 = S
+              toHonor 32 = W
+              toHonor 33 = N
+
+
+instance Bounded Tile where
+    minBound = Man One
+    maxBound = N
+-}
 
 -- | Possible numerical value of tiles ('Honor' for honors)
 data TNumber = One | Two | Three | Four | Five | Six | Seven | Eight | Nine
