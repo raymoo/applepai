@@ -170,7 +170,7 @@ everyTile = numTiles ++ honorTiles
 -- | 'Traversal' for the 'TNumber' of a 'Tile' (focus on 0 or 1)
 tileNum :: Traversal Tile Tile TNumber TNumber
 tileNum f (NumT s n) = NumT s <$> f n
-tileNum f t       = pure t
+tileNum _ t          = pure t
 
 -- | 'Getter' for augmented 'TNumber' (returns Nothing fo honors)
 maybeTileNum :: Getter Tile (Maybe TNumber)

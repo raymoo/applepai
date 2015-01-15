@@ -33,6 +33,8 @@ module Mahjong.Group(
                       -- * Lenses
                     , groupTiles
                     , tileCount
+                      -- * Testing
+                    , standardTestHand
  )where
 
 import           Control.Applicative ((<$>), (<*>), (<|>))
@@ -132,17 +134,20 @@ kouParser :: MultiParser Tile Group
 kouParser = listToKou <$> forValues (nOf 3)
    -- unsafe! Relies on there always being three matching tiles
   where listToKou (t:t':t'':_) = Kou t t' t''
+        listToKou _            = error "listToKou failed"
 
 -- | Parses a kan
 kanParser :: MultiParser Tile Group
 kanParser = listToKan <$> forValues (nOf 4)
   -- same as above
   where listToKan (t:t':t'':t''':_) = Kan t t' t'' t'''
+        listToKan _                 = error "listToKan failed"
 
 -- | Parses a pair
 atamaParser :: MultiParser Tile Group
 atamaParser = listToAtama <$> forValues (nOf 2)
   where listToAtama (t:t':_) = Atama t t'
+        listToAtama _        = error "listToAtama failed"
 
 -- | Parses a Shun
 shunParser :: MultiParser Tile Group
