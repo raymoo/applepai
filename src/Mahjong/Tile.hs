@@ -35,6 +35,7 @@ module Mahjong.Tile (
 
 import           Control.Applicative (Applicative, (<$>), (<*>), pure)
 import           Control.Lens
+import           Mahjong.Cycle
 
 -- | Numerical Suits
 data NumS = Man | Sou | Pin
@@ -43,8 +44,20 @@ data NumS = Man | Sou | Pin
 data DColor = R | G | H
             deriving (Show, Eq, Ord, Enum, Bounded)
 
+instance Cycle DColor where
+  forward H = R
+  forward c = succ c
+  backward R = H
+  backward c = pred c
+
 data Direction = E | S | W | N
                deriving (Show, Eq, Ord, Enum, Bounded)
+
+instance Cycle Direction where
+  forward N = E
+  forward d = succ d
+  backward E = N
+  backward d = pred d
 
 -- | Mahjong tile values
 
