@@ -33,7 +33,7 @@ module Mahjong.Tile (
 
  )where
 
-import           Control.Applicative (Applicative, (<$>), (<*>), pure)
+import           Control.Applicative ((<$>), (<*>), pure)
 import           Control.Lens
 import           Mahjong.Cycle
 
@@ -126,6 +126,12 @@ data TNumber = One | Two | Three | Four | Five | Six | Seven | Eight | Nine
 
 instance Show TNumber where
   show = show . (+1) . fromEnum
+
+instance Cycle TNumber where
+  forward Nine = One
+  forward x    = succ x
+  backward One = Nine
+  backward x   = pred x
 
 -- | Tile suits. Honors are split up into two suits: 'Dragon' and 'Wind'
 --
