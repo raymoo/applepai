@@ -11,7 +11,7 @@ Portability : portable
 
 module Mahjong.Group(
                       -- * Mahjong groups
-                      Group
+                      Group(..)
                       -- ** Group types
                     , GroupType(..)
                     , groupType
@@ -43,6 +43,8 @@ import           Mahjong.Tile
 import           Parse.MultiSet
 
 -- | Mahjong groups
+-- Don't use these constructors to create groups - this is unsafe, since you
+-- might make invalid Groups.
 data Group = Atama Tile Tile -- ^ Pair
            | Shun Tile Tile Tile
            | Kou Tile Tile Tile
