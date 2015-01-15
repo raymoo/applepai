@@ -55,6 +55,12 @@ instance Alternative (MultiParser a) where
     MultiParser f <|> MultiParser g =
         MultiParser $ \ms -> f ms ++ g ms
 
+instance Monad (MultiParser a) where
+  return = pure
+  MultiParser f >>= k = MultiParser $ \a ->
+                        let parses = f a
+                        in parses >>= \(b, ms) -> runParser (k b) ms
+
 -- Helper function for removing an element from a multiset
 removePair :: Ord a => MS.MultiSet a -> a -> (a, MS.MultiSet a)
 removePair ms x = (x, MS.delete x ms)
