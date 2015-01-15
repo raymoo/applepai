@@ -35,7 +35,7 @@ module Mahjong.Group(
                     , tileCount
  )where
 
-import           Control.Applicative ((<$>), (<*>))
+import           Control.Applicative ((<$>), (<*>), (<|>))
 import           Control.Lens
 import           Data.List           (intercalate)
 import           Data.Maybe          (isJust)
@@ -169,3 +169,11 @@ groupTiles f (Kan t1 t2 t3 t4) = Kan <$> f t1 <*> f t2 <*> f t3 <*> f t4
 -- | A 'Getter' focusing on the number of 'Tile's in a 'Group'
 tileCount :: Getter Group Int
 tileCount = \f s -> coerce $ f $ getTileCount s
+
+
+-- | "Standard" hand. For testing only, since a real hand might already have
+-- open groups.
+standardTestHand :: MultiParser Tile [Group]
+standardTestHand = getEachOf [(1,atamaParser), (4, threeParser)]
+  where threeParser = kouParser <|> shunParser
+
