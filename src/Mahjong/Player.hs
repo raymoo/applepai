@@ -1,3 +1,14 @@
+{-|
+Module      : Mahjong.Player
+Description : Defines players, and some operations on them
+Copyright   : (c) Leon Medvinsky, 2014
+
+License     : GPL-3
+Maintainer  : lmedvinsky@hotmail.com
+Stability   : experimental
+Portability : portable
+-}
+
 {-# LANGUAGE TemplateHaskell #-}
 
 module Mahjong.Player (

@@ -1,3 +1,14 @@
+{-|
+Module      : Mahjong.Group.Wait
+Description : Defines group waits and some operations involving them
+Copyright   : (c) Leon Medvinsky, 2014
+
+License     : GPL-3
+Maintainer  : lmedvinsky@hotmail.com
+Stability   : experimental
+Portability : portable
+-}
+
 module Mahjong.Group.Wait (
                             -- * Data
                             Wait(..)
