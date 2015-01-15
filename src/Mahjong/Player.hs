@@ -12,7 +12,7 @@ Portability : portable
 {-# LANGUAGE TemplateHaskell #-}
 
 module Mahjong.Player (
-                        Seat
+                        Seat(..)
                         -- * Hands
                       , Hand(..)
                       , closedTiles
