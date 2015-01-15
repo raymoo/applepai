@@ -2,6 +2,7 @@ module Mahjong.Group.Wait (
                             -- * Data
                             Wait(..)
                             -- * Interaction with Groups
+                          , waitToGroup
                             -- * Lenses
                           , waitTiles
                             -- * Parsers
