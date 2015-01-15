@@ -21,13 +21,16 @@ module Mahjong.Player (
                       , testPlayer
                       ) where
 
-import Mahjong.Group
-import Mahjong.Tile
-import Control.Lens
-import Data.Monoid (Sum(..))
-import Data.List   (intercalate)
-import qualified Data.MultiSet      as MS
+import           Control.Lens
+import           Mahjong.Group
+import           Mahjong.Tile
+
+import           Data.List          (intercalate)
+import           Data.Monoid        (Sum (..))
+
 import qualified Data.IntMap.Strict as IM
+import qualified Data.MultiSet      as MS
+
 
 data Seat = East
           | South
@@ -53,7 +56,6 @@ instance Show Hand where
              intercalate " " (h^..openGroups.traversed._1.to show) ++
              " | " ++
              intercalate " " (h^..closedGroups.traversed.to show))
-
 
 data Player = Player { _hand  :: Hand
                      , _wind  :: Seat
@@ -97,7 +99,7 @@ testHand = Hand { _newTile = Just $ Wind E
                 , _closedTiles = IM.fromList $ [1..] `zip` replicate 12 (NumT Sou Six)
                 , _openGroups  = []
                 , _closedGroups = []
-                } 
+                }
 
 testPlayer :: Player
 testPlayer = Player { _hand  = testHand
