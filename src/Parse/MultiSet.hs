@@ -22,11 +22,12 @@ module Parse.MultiSet (
                       , count
                       , forValues
                       , forFilteredValues
+                      , getEachOf
 ) where
 
 import           Control.Applicative (Alternative, Applicative, empty, pure,
                                       (<$>), (<*>), (<|>))
-import           Control.Arrow       (first)
+import           Control.Arrow       (first, second)
 import qualified Data.Foldable       as F
 import           Data.Maybe          (mapMaybe)
 import qualified Data.MultiSet       as MS
@@ -104,3 +105,23 @@ forFilteredValues :: (a -> Maybe (MultiParser a b)) -> MultiParser a b
 forFilteredValues p = MultiParser $ \ms ->
   flip runParser ms .
   F.foldr (<|>) empty . mapMaybe p . MS.distinctElems $ ms
+
+-- | Get a parse with the specified parsers
+getEachOf :: [(Int, MultiParser a b)] -> MultiParser a [b]
+getEachOf [] = pure []
+getEachOf xs = F.asum $ map go slices
+  where slices = slice xs
+        go (x,xs') = (:) <$> x <*> getEachOf xs'
+
+-- | Gets every view of a list where you have an element and the rest
+slice :: [(Int, a)] -> [(a,[(Int, a)])]
+slice []     = []
+slice ((n,x):xs)
+  | n > 1 =
+      let y'  = (x,(n-1, x):xs)
+          ys' = map (second ((n,x):)) $ slice xs
+      in y' : ys'
+  | otherwise =
+      let y'  = (x, xs)
+          ys' = map (second ((1,x):)) $ slice xs
+      in y' : ys'
