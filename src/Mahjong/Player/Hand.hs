@@ -25,11 +25,17 @@ module Mahjong.Player.Hand (
             , handTiles
               -- * Results
             , Result(..)
+            , WinMethod(..)
+            , WinTile(..)
+              -- * Winning
+            , tryAgari
               -- ** Lenses
             , resWait
-            , resTsumo
+            , resWinTile
             , resOpens
             , resCloseds
+            , resAtama
+            , resWin
               -- * Testing
             , testHand
             ) where
@@ -38,7 +44,9 @@ import           Control.Lens
 import           Control.Applicative
 import qualified Data.IntMap.Strict as IM
 import           Data.List          (intercalate)
+import           Data.Maybe
 import           Data.Monoid
+import qualified Data.MultiSet      as MS
 import           Mahjong.Group
 import           Mahjong.Group.Wait
 import           Mahjong.Tile
@@ -93,21 +101,81 @@ testHand =
        , _closedGroups = []
        }
 
+data WinTile = Tsumo Tile
+             | Ron Tile Direction
+             deriving (Show, Eq)
+
+data WinMethod = MTsumo
+               | MRon Direction
+
+-- | Utility function. Not exported.
+combineMethodTile :: WinMethod -> Tile -> WinTile
+combineMethodTile MTsumo    t = Tsumo t
+combineMethodTile (MRon d)  t = Ron t d
+
 data Result =
   Result { _resWait    :: Wait
-         , _resTsumo   :: Tile
-         , _resOpens   :: [Group]
+         , _resWinTile :: WinTile
+         , _resOpens   :: [(Group, Seat)]
          , _resCloseds :: [Group]
+         , _resAtama   :: Maybe Atama -- ^ Might have won by atama
+         , _resWin     :: Either Atama Group -- ^ What was won by
          }
+  deriving (Show, Eq)
 
 makeLenses ''Result
 
 -- | Try to create valid 'Result's from this 'Hand'.
-tryAgari :: Hand -> [Result]
-tryAgari hand = undefined
-  where threeParser = kouParser <|> shunParser
+tryAgari :: WinMethod -> Hand -> [Result]
+tryAgari method hand = fromMaybe [] $
+  map fst .
+  (\t -> filter (MS.null . snd) (runParser (allResP t) handSet))
+  <$> (hand ^. newTile)
+  where handSet = MS.fromList . map snd . IM.toList $ (hand ^.closedTiles)
+        remGroups =
+          4 - hand ^.openGroups.to length - hand ^.closedGroups.to length
+        threeParser = kouParser <|> shunParser
         threeWParser = ryanParser <|> kanchParser <|> penParser
-        shanHandP = (,) <$> count 3 threeParser <*> shanParser
-        tankiHandP = (,) <$> count 4 threeParser <*> tanParser
+        shanHandP = (,) <$> count (remGroups - 1) threeParser <*> shanParser
+        tankiHandP = (,) <$> count remGroups threeParser <*> tanParser
         normHandP =
-          (,,) <$> count 3 threeParser <*> atamaParser <*> threeWParser
+          (,,) <$> count (remGroups - 1) threeParser
+               <*> atamaParser
+               <*> threeWParser
+        shanResP new = catMaybeParse $ waitingFinishSh new <$> shanHandP
+        tankiResP new = catMaybeParse $ waitingFinishTan new <$> tankiHandP
+        normResP new = catMaybeParse $ waitingFinishNorm new <$> normHandP
+        allResP new = shanResP new <|> tankiResP new <|> normResP new
+        waitingFinishSh t (gs, sh) =
+          case shanponCheck t sh of
+           Just (ata, g) -> Just
+             Result { _resWait    = sh
+                    , _resWinTile = combineMethodTile method t
+                    , _resOpens   = hand ^.openGroups
+                    , _resCloseds = hand ^.closedGroups ++ gs
+                    , _resAtama   = Just ata
+                    , _resWin     = Right g
+                    } 
+           Nothing -> Nothing
+        waitingFinishTan t (gs, tank) =
+          case tankiCheck t tank of
+           Just ata -> Just
+             Result { _resWait    = tank
+                    , _resWinTile = combineMethodTile method t
+                    , _resOpens   = hand ^.openGroups
+                    , _resCloseds = hand ^.closedGroups ++ gs
+                    , _resAtama   = Nothing
+                    , _resWin     = Left ata
+                    } 
+           Nothing  -> Nothing
+        waitingFinishNorm t (gs, ata, w) =
+          case waitToGroup t w of
+           Just g  -> Just
+             Result { _resWait    = w
+                    , _resWinTile = combineMethodTile method t
+                    , _resOpens   = hand ^.openGroups
+                    , _resCloseds = hand ^.closedGroups ++ gs
+                    , _resAtama   = Just ata
+                    , _resWin     = Right g
+                    }
+           Nothing -> Nothing
