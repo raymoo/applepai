@@ -38,6 +38,7 @@ module Mahjong.Player.Hand (
             , resWin
               -- * Testing
             , testHand
+            , testHand2
             ) where
 
 import           Control.Lens
@@ -126,6 +127,7 @@ wellFormed h = cTNum + oGNum + cGNum == (12 :: Int)
         cGNum = countOf (closedGroups.traversed.groupTiles) h
         countOf l = getSum . foldMapOf l (const (Sum 1))
 
+-- | Test hand for open groups
 testHand :: Hand
 testHand =
   Hand { _newTile = Just $ Dragon R
@@ -134,6 +136,19 @@ testHand =
                                       ++ replicate 3 (Wind S)
                                       ++ replicate 2 (Wind N))
        , _openGroups  = [(Kou (Dragon G) (Dragon G) (Dragon G), W)]
+       , _closedGroups = []
+       }
+
+-- | Test hand for multiple interpretations
+testHand2 :: Hand
+testHand2 =
+  Hand { _newTile = Just $ NumT Sou One
+       , _closedTiles = IM.fromList $ [1..] `zip` (replicate 2 (Dragon R)
+                                      ++ replicate 2 (NumT Sou One)
+                                      ++ replicate 3 (NumT Sou Two)
+                                      ++ replicate 3 (NumT Sou Three)
+                                      ++ replicate 3 (Dragon G))
+       , _openGroups  = []
        , _closedGroups = []
        }
 
