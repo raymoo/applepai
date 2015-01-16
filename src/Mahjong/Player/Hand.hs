@@ -122,9 +122,15 @@ instance Show Result where
 -- | Tests if the hand has the right number of tiles
 wellFormed :: Hand -> Bool
 wellFormed h = cTNum + oGNum + cGNum == (12 :: Int)
-  where cTNum = countOf (closedTiles.folded) h
+  where cTNum = countOf (closedTiles.folded) h -- Closed tile count
+
+        -- open groups tile count
         oGNum = countOf (openGroups.traversed._1.groupTiles) h
+
+        -- closed groups tile count
         cGNum = countOf (closedGroups.traversed.groupTiles) h
+
+        -- Gets the count of things in a traversal
         countOf l = getSum . foldMapOf l (const (Sum 1))
 
 -- | Test hand for open groups
@@ -163,25 +169,50 @@ combineMethodTile (MRon d)  t = Ron t d
 
 -- | Try to create valid 'Result's from this 'Hand'.
 tryAgari :: WinMethod -> Hand -> [Result]
-tryAgari method hand = fromMaybe [] $
-  map fst .
+tryAgari method hand = fromMaybe [] $ -- Convert the Maybe list of Results to
+                                      -- just a list of Results
+
+  map fst . -- We don't want the remaining MultiSet (which should be empty)
+
+  -- Get rid of Results that have not used all the tiles
   (\t -> filter (MS.null . snd) (runParser (allResP t) handSet))
+
+  -- fmap this onto the possible newTile. It will be Nothing if there isn't an
+  -- additional tile (and then it should fail).
+  -- ???: Should I differentiate between newTiles that come from Ron or Tsumo?
   <$> (hand ^. newTile)
-  where handSet = MS.fromList . map snd . IM.toList $ (hand ^.closedTiles)
+  
+  where -- The set of closed tiles converted to MultiSet, for parsing
+        handSet = MS.fromList . map snd . IM.toList $ (hand ^.closedTiles)
+
+        -- How many groups we need to make. 4 - groups already declared
         remGroups =
           4 - hand ^.openGroups.to length - hand ^.closedGroups.to length
+
+        -- Parser for either three-tile group
         threeParser = kouParser <|> shunParser
+
+        -- Parser for any of the three shuntsu waits
         threeWParser = ryanParser <|> kanchParser <|> penParser
+
+        -- These parsers parser the remaining closed tiles into intermediate
+        -- results, which are different for each "class" of wait (shanpon,
+        -- tanki, or any of the two-tile waits)
         shanHandP = (,) <$> count (remGroups - 1) threeParser <*> shanParser
         tankiHandP = (,) <$> count remGroups threeParser <*> tanParser
         normHandP =
           (,,) <$> count (remGroups - 1) threeParser
                <*> atamaParser
                <*> threeWParser
+
+        -- These parsers parse the remaining closed tiles into results
         shanResP new = catMaybeParse $ waitingFinishSh new <$> shanHandP
         tankiResP new = catMaybeParse $ waitingFinishTan new <$> tankiHandP
         normResP new = catMaybeParse $ waitingFinishNorm new <$> normHandP
         allResP new = shanResP new <|> tankiResP new <|> normResP new
+
+        -- These functions take the output of the HandPs and creates Result
+        -- values from them (and the tile in-hand)
         waitingFinishSh t (gs, sh) =
           case shanponCheck t sh of
            Just (ata, g) -> Just
