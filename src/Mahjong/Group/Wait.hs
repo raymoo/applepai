@@ -43,7 +43,8 @@ data Wait = Ryanmen Tile Tile
           | Tanki Tile
             deriving (Show, Eq)
 
--- | See if you can make a 'Group' with this 'Tile' and a 'Wait
+-- | See if you can make a 'Group' with this 'Tile' and a 'Wait'
+--
 -- Grouping tiles with waits have unique solutions. When in a Shanpon wait, you
 -- will get a koutsu and a pair out.
 waitToGroup :: Tile -> Wait -> Maybe Group
@@ -60,6 +61,7 @@ waitToGroup t (Penchan t1 t2)
 waitToGroup _ _ = Nothing
 
 -- | Like 'waitToGroup', but checks shanpon and sees if the 'Tile' completes it
+--
 -- If it works, the second field will always be a koutsu
 shanponCheck :: Tile -> Wait -> Maybe (Atama, Group)
 shanponCheck t (Shanpon (t11, t12) (t21, t22))
