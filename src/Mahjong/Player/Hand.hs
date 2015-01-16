@@ -114,6 +114,9 @@ instance Show Result where
     ++ " Open: "
     ++ show (res ^. resOpens)
     ++ " Wait: "
+    ++ show (res ^. resWait)
+    ++ " + "
+    ++ show (res ^. resWinTile)
 
 -- | Tests if the hand has the right number of tiles
 wellFormed :: Hand -> Bool
