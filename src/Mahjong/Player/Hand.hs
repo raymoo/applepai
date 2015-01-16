@@ -85,6 +85,36 @@ instance Show Hand where
              " | " ++
              intercalate " " (h^..closedGroups.traversed.to show))
 
+data WinTile = Tsumo Tile
+             | Ron Tile Direction
+             deriving (Eq)
+
+instance Show WinTile where
+  show (Tsumo t) = show t ++ " tsumo'd"
+  show (Ron t d) = show t ++ " from " ++ show d
+
+data Result =
+  Result { _resWait    :: Wait
+         , _resWinTile :: WinTile
+         , _resOpens   :: [(Group, Seat)]
+         , _resCloseds :: [Group]
+         , _resAtama   :: Maybe Atama -- ^ Might have won by atama
+         , _resWin     :: Either Atama Group -- ^ What was won by
+         }
+  deriving (Eq)
+
+makeLenses ''Result
+
+instance Show Result where
+  show res =
+    "Closed: "
+    ++ show (res ^. resCloseds)
+    ++ " "
+    ++ maybe "" show (res ^. resAtama)
+    ++ " Open: "
+    ++ show (res ^. resOpens)
+    ++ " Wait: "
+
 -- | Tests if the hand has the right number of tiles
 wellFormed :: Hand -> Bool
 wellFormed h = cTNum + oGNum + cGNum == (12 :: Int)
@@ -95,35 +125,23 @@ wellFormed h = cTNum + oGNum + cGNum == (12 :: Int)
 
 testHand :: Hand
 testHand =
-  Hand { _newTile = Just $ Wind E
-       , _closedTiles = IM.fromList $ [1..] `zip` replicate 12 (NumT Sou Six)
-       , _openGroups  = []
+  Hand { _newTile = Just $ Dragon R
+       , _closedTiles = IM.fromList $ [1..] `zip` (replicate 2 (Dragon R)
+                                      ++ replicate 3 (Dragon H)
+                                      ++ replicate 3 (Wind S)
+                                      ++ replicate 2 (Wind N))
+       , _openGroups  = [(Kou (Dragon G) (Dragon G) (Dragon G), W)]
        , _closedGroups = []
        }
 
-data WinTile = Tsumo Tile
-             | Ron Tile Direction
-             deriving (Show, Eq)
-
 data WinMethod = MTsumo
                | MRon Direction
+               deriving (Show, Eq)
 
 -- | Utility function. Not exported.
 combineMethodTile :: WinMethod -> Tile -> WinTile
 combineMethodTile MTsumo    t = Tsumo t
 combineMethodTile (MRon d)  t = Ron t d
-
-data Result =
-  Result { _resWait    :: Wait
-         , _resWinTile :: WinTile
-         , _resOpens   :: [(Group, Seat)]
-         , _resCloseds :: [Group]
-         , _resAtama   :: Maybe Atama -- ^ Might have won by atama
-         , _resWin     :: Either Atama Group -- ^ What was won by
-         }
-  deriving (Show, Eq)
-
-makeLenses ''Result
 
 -- | Try to create valid 'Result's from this 'Hand'.
 tryAgari :: WinMethod -> Hand -> [Result]
