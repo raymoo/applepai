@@ -13,7 +13,8 @@ Portability : portable
 
 module Mahjong.Player.Hand (
               -- * Hands
-              Hand(..)
+              Seat
+            , Hand(..)
               -- ** Query
             , getHandTiles
             , wellFormed

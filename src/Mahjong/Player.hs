@@ -37,8 +37,6 @@ import qualified Data.IntMap.Strict as IM
 import qualified Data.MultiSet      as MS
 import           Mahjong.Player.Hand
 
-type Seat = Direction
-
 
 data Player = Player { _hand  :: Hand
                      , _wind  :: Seat
