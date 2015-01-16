@@ -51,11 +51,14 @@ library
 
   -- Modules exported by the library.
   exposed-modules:
+    Parse.MultiSet
+    Mahjong.Cycle
     Mahjong.Tile
     Mahjong.Group
-    Parse.MultiSet
+    Mahjong.Group.Wait
     Mahjong.Player
-  
+    Mahjong.Player.Hand
+
   ghc-options: -O2 -Wall -fwarn-tabs
   -- Modules included in this library but not exported.
   -- other-modules:       
