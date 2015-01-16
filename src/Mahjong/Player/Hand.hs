@@ -125,10 +125,10 @@ wellFormed h = cTNum + oGNum + cGNum == (12 :: Int)
   where cTNum = countOf (closedTiles.folded) h -- Closed tile count
 
         -- open groups tile count
-        oGNum = countOf (openGroups.traversed._1.groupTiles) h
+        oGNum = countOf (openGroups.traversed) h * 3
 
         -- closed groups tile count
-        cGNum = countOf (closedGroups.traversed.groupTiles) h
+        cGNum = countOf (closedGroups.traversed) h * 3
 
         -- Gets the count of things in a traversal
         countOf l = getSum . foldMapOf l (const (Sum 1))
