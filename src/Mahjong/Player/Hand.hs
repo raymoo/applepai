@@ -12,26 +12,37 @@ Portability : portable
 {-# LANGUAGE TemplateHaskell #-}
 
 module Mahjong.Player.Hand (
+              -- * Hands
               Hand(..)
-              -- * Query
+              -- ** Query
             , getHandTiles
             , wellFormed
-              -- * Lenses
+              -- ** Lenses
             , newTile
             , closedTiles
             , openGroups
             , closedGroups
             , handTiles
+              -- * Results
+            , Result(..)
+              -- ** Lenses
+            , resWait
+            , resTsumo
+            , resOpens
+            , resCloseds
               -- * Testing
             , testHand
             ) where
 
 import           Control.Lens
+import           Control.Applicative
 import qualified Data.IntMap.Strict as IM
 import           Data.List          (intercalate)
 import           Data.Monoid
 import           Mahjong.Group
+import           Mahjong.Group.Wait
 import           Mahjong.Tile
+import           Parse.MultiSet
 
 type Seat = Direction
 
@@ -81,3 +92,22 @@ testHand =
        , _openGroups  = []
        , _closedGroups = []
        }
+
+data Result =
+  Result { _resWait    :: Wait
+         , _resTsumo   :: Tile
+         , _resOpens   :: [Group]
+         , _resCloseds :: [Group]
+         }
+
+makeLenses ''Result
+
+-- | Try to create valid 'Result's from this 'Hand'.
+tryAgari :: Hand -> [Result]
+tryAgari hand = undefined
+  where threeParser = kouParser <|> shunParser
+        threeWParser = ryanParser <|> kanchParser <|> penParser
+        shanHandP = (,) <$> count 3 threeParser <*> shanParser
+        tankiHandP = (,) <$> count 4 threeParser <*> tanParser
+        normHandP =
+          (,,) <$> count 3 threeParser <*> atamaParser <*> threeWParser

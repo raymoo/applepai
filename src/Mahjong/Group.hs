@@ -12,6 +12,7 @@ Portability : portable
 module Mahjong.Group(
                       -- * Mahjong groups
                       Group(..)
+                    , Atama(..)
                       -- ** Group types
                     , GroupType(..)
                     , groupType
@@ -33,6 +34,7 @@ module Mahjong.Group(
                       -- * Lenses
                     , groupTiles
                     , tileCount
+                    , atamaTiles
                       -- * Testing
                     , standardTestHand
  )where
@@ -47,11 +49,13 @@ import           Parse.MultiSet
 -- | Mahjong groups
 -- Don't use these constructors to create groups - this is unsafe, since you
 -- might make invalid Groups.
-data Group = Atama Tile Tile -- ^ Pair
-           | Shun Tile Tile Tile
+data Group = Shun Tile Tile Tile
            | Kou Tile Tile Tile
            | Kan Tile Tile Tile Tile
              deriving (Eq, Ord)
+
+-- | Pairs are a separate data type, because they are pretty different
+data Atama = Atama Tile Tile
 
 instance Show Group where
   show g = intercalate "-" $ g^..groupTiles.(to show)
@@ -63,12 +67,11 @@ data GroupType = Pair
                | Kantsu
 
 groupType :: Group -> GroupType
-groupType Atama{} = Pair
 groupType Shun{}  = Shuntsu
 groupType Kou{}   = Koutsu
 groupType Kan{}   = Kantsu
 
-atama :: Tile -> Tile -> Maybe Group
+atama :: Tile -> Tile -> Maybe Atama
 atama t@(NumT s n) t2@(NumT s2 n2)
     | n == n2 &&
       s == s2    = Just $ Atama t t2
@@ -124,7 +127,6 @@ getGroupTiles = toListOf groupTiles
 
 -- | Gets the number of 'Tile's in a 'Group'
 getTileCount :: Group -> Int
-getTileCount Atama{} = 2
 getTileCount Shun{}  = 3
 getTileCount Kou{}   = 3
 getTileCount Kan{}   = 4
@@ -144,7 +146,7 @@ kanParser = listToKan <$> forValues (nOf 4)
         listToKan _                 = error "listToKan failed"
 
 -- | Parses a pair
-atamaParser :: MultiParser Tile Group
+atamaParser :: MultiParser Tile Atama
 atamaParser = listToAtama <$> forValues (nOf 2)
   where listToAtama (t:t':_) = Atama t t'
         listToAtama _        = error "listToAtama failed"
@@ -168,10 +170,13 @@ shunParser = forFilteredValues checkNum
 
 -- | A 'Fold' focusing on the 'Tile's of a 'Group'
 groupTiles :: Fold Group Tile
-groupTiles f (Atama t1 t2)     = Atama <$> f t1 <*> f t2
 groupTiles f (Shun t1 t2 t3)   = Shun <$> f t1 <*> f t2 <*> f t3
 groupTiles f (Kou t1 t2 t3)    = Kou <$> f t1 <*> f t2 <*> f t3
 groupTiles f (Kan t1 t2 t3 t4) = Kan <$> f t1 <*> f t2 <*> f t3 <*> f t4
+
+-- | A 'Fold' focusing on the 'Tile's of an 'Atama'
+atamaTiles :: Fold Atama Tile
+atamaTiles f (Atama t1 t2) = Atama <$> f t1 <*> f t2
 
 -- | A 'Getter' focusing on the number of 'Tile's in a 'Group'
 tileCount :: Getter Group Int
@@ -180,7 +185,7 @@ tileCount = \f s -> coerce $ f $ getTileCount s
 
 -- | "Standard" hand. For testing only, since a real hand might already have
 -- open groups.
-standardTestHand :: MultiParser Tile [Group]
-standardTestHand = getEachOf [(1,atamaParser), (4, threeParser)]
+standardTestHand :: MultiParser Tile ([Group], Atama)
+standardTestHand = (,) <$> getEachOf [(4, threeParser)] <*> atamaParser
   where threeParser = kouParser <|> shunParser
 

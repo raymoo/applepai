@@ -14,11 +14,13 @@ module Mahjong.Group.Wait (
                             Wait(..)
                             -- * Interaction with Groups
                           , waitToGroup
+                          , shanponCheck
+                          , tankiCheck
                             -- * Lenses
                           , waitTiles
                             -- * Parsers
                           , ryanParser
-                          , kanParser
+                          , kanchParser
                           , penParser
                           , shanParser
                           , tanParser
@@ -44,23 +46,32 @@ data Wait = Ryanmen Tile Tile
 -- | See if you can make a 'Group' with this 'Tile' and a 'Wait
 -- Grouping tiles with waits have unique solutions. When in a Shanpon wait, you
 -- will get a koutsu and a pair out.
-waitToGroup :: Tile -> Wait -> [Group]
+waitToGroup :: Tile -> Wait -> Maybe Group
 waitToGroup t (Ryanmen t1 t2)
-  | t == (t1 & tileNum %~ pred) = [Shun t t1 t2]
-  | t == (t2 & tileNum %~ succ) = [Shun t1 t2 t]
+  | t == (t1 & tileNum %~ pred) = pure $ Shun t t1 t2
+  | t == (t2 & tileNum %~ succ) = pure $ Shun t1 t2 t
 waitToGroup t (Kanchan t1 t2)
-  | t == (t1 & tileNum %~ succ) = [Shun t1 t t2]
+  | t == (t1 & tileNum %~ succ) = pure $ Shun t1 t t2
 waitToGroup t (Penchan t1 t2)
-  | onTheLeft  && t == (t2 & tileNum %~ succ) = [Shun t1 t2 t]
-  | onTheRight && t == (t1 & tileNum %~ pred) = [Shun t t1 t2]
+  | onTheLeft  && t == (t2 & tileNum %~ succ) = pure $ Shun t1 t2 t
+  | onTheRight && t == (t1 & tileNum %~ pred) = pure $ Shun t t1 t2
   where onTheLeft = t1 ^? tileNum == Just One
         onTheRight = not onTheLeft
-waitToGroup t (Shanpon (t11, t12) (t21, t22))
-               | t == t11 = [Atama t21 t22, Kou t t11 t12]
-               | t == t21 = [Atama t11 t12, Kou t t21 t22]
-waitToGroup t (Tanki t1)
-  | t == t1 = [Atama t t1]
-waitToGroup _ _ = []
+waitToGroup _ _ = Nothing
+
+-- | Like 'waitToGroup', but checks shanpon and sees if the 'Tile' completes it
+-- If it works, the second field will always be a koutsu
+shanponCheck :: Tile -> Wait -> Maybe (Atama, Group)
+shanponCheck t (Shanpon (t11, t12) (t21, t22))
+  | t == t11  = Just $ (Atama t21 t22, Kou t t11 t12)
+  | t == t21  = Just $ (Atama t11 t12, Kou t t21 t22)
+shanponCheck _ _ = Nothing
+
+-- | Like 'shanponCheck and 'waitToGroup', for atama and tanki waits
+tankiCheck :: Tile -> Wait -> Maybe Atama
+tankiCheck t (Tanki t1)
+  | t == t1 = pure $ Atama t t1
+tankiCheck _ _ = Nothing
 
 -- | Fold that gets the tiles in a 'Wait'
 waitTiles :: Fold Wait Tile
