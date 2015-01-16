@@ -98,8 +98,9 @@ nOf n x = MultiParser $ \ms ->
 
 -- | count n p parses n occurences of p
 count :: Int -> MultiParser a b -> MultiParser a [b]
-count 0 _ = pure []
-count n p = (:) <$> p  <*> count (n - 1) p
+count n p
+  | n > 0     = (:) <$> p  <*> count (n - 1) p
+  | otherwise = pure []
 
 -- | For each unique value, try a parse
 forValues :: (a -> MultiParser a b) -> MultiParser a b
