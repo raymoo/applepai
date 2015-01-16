@@ -56,6 +56,7 @@ data Group = Shun Tile Tile Tile
 
 -- | Pairs are a separate data type, because they are pretty different
 data Atama = Atama Tile Tile
+           deriving (Show, Eq, Ord)
 
 instance Show Group where
   show g = intercalate "-" $ g^..groupTiles.(to show)
