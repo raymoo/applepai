@@ -97,7 +97,7 @@ nOf n x = MultiParser $ \ms ->
     where removeNPair ms x' = (replicate n x', MS.deleteMany x' n ms)
 
 -- | count n p parses n occurences of p
-count :: Int -> MultiParser a a -> MultiParser a [a]
+count :: Int -> MultiParser a b -> MultiParser a [b]
 count 0 _ = pure []
 count n p = (:) <$> p  <*> count (n - 1) p
 
