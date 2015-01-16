@@ -23,13 +23,15 @@ module Parse.MultiSet (
                       , forValues
                       , forFilteredValues
                       , getEachOf
+                      , catMaybeParse
 ) where
 
 import           Control.Applicative (Alternative, Applicative, empty, pure,
                                       (<$>), (<*>), (<|>))
 import           Control.Arrow       (first, second)
 import qualified Data.Foldable       as F
-import           Data.Maybe          (mapMaybe)
+import           Data.Maybe          (mapMaybe, catMaybes)
+import           Data.Monoid
 import qualified Data.MultiSet       as MS
 
 
@@ -60,6 +62,10 @@ instance Monad (MultiParser a) where
   MultiParser f >>= k = MultiParser $ \a ->
                         let parses = f a
                         in parses >>= \(b, ms) -> runParser (k b) ms
+
+instance Monoid (MultiParser a b) where
+  mempty = empty
+  mappend = (<|>)
 
 -- Helper function for removing an element from a multiset
 removePair :: Ord a => MS.MultiSet a -> a -> (a, MS.MultiSet a)
@@ -132,3 +138,9 @@ slice ((n,x):xs)
       let y'  = (x, xs)
           ys' = map (second ((1,x):)) $ slice xs
       in y' : ys'
+
+catMaybeParse :: MultiParser a (Maybe b) -> MultiParser a b
+catMaybeParse (MultiParser f) = MultiParser $ \ms ->
+  catMaybes . map expandMaybe $ f ms
+  where expandMaybe (Nothing, _) = Nothing
+        expandMaybe (Just x , y) = Just (x, y)
