@@ -237,36 +237,36 @@ tryAgari method hand = fromMaybe [] $ -- Convert the Maybe list of Results to
 
         -- These functions take the output of the HandPs and creates Result
         -- values from them (and the tile in-hand)
-        waitingFinishSh t (gs, sh) =
-          case shanponCheck t sh of
-           Just (ata, g) -> Just
-             Result { _resWait    = sh
-                    , _resWinTile = combineMethodTile method t
+        waitingFinishSh tile (groups, wait) =
+          case shanponCheck tile wait of
+           Just (ata, group) -> Just
+             Result { _resWait    = wait
+                    , _resWinTile = combineMethodTile method tile
                     , _resOpens   = hand ^.openGroups
-                    , _resCloseds = hand ^.closedGroups ++ gs
+                    , _resCloseds = hand ^.closedGroups ++ groups
                     , _resAtama   = Just ata
-                    , _resWin     = Right g
+                    , _resWin     = Right group
                     } 
            Nothing -> Nothing
-        waitingFinishTan t (gs, tank) =
-          case tankiCheck t tank of
+        waitingFinishTan tile (groups, wait) =
+          case tankiCheck tile wait of
            Just ata -> Just
-             Result { _resWait    = tank
-                    , _resWinTile = combineMethodTile method t
+             Result { _resWait    = wait
+                    , _resWinTile = combineMethodTile method tile
                     , _resOpens   = hand ^.openGroups
-                    , _resCloseds = hand ^.closedGroups ++ gs
+                    , _resCloseds = hand ^.closedGroups ++ groups
                     , _resAtama   = Nothing
                     , _resWin     = Left ata
                     } 
            Nothing  -> Nothing
-        waitingFinishNorm t (gs, ata, w) =
-          case waitToGroup t w of
-           Just g  -> Just
-             Result { _resWait    = w
-                    , _resWinTile = combineMethodTile method t
+        waitingFinishNorm tile (groups, ata, wait) =
+          case waitToGroup tile wait of
+           Just group  -> Just
+             Result { _resWait    = wait
+                    , _resWinTile = combineMethodTile method tile
                     , _resOpens   = hand ^.openGroups
-                    , _resCloseds = hand ^.closedGroups ++ gs
+                    , _resCloseds = hand ^.closedGroups ++ groups
                     , _resAtama   = Just ata
-                    , _resWin     = Right g
+                    , _resWin     = Right group
                     }
            Nothing -> Nothing
