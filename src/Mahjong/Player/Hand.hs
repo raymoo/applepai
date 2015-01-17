@@ -170,29 +170,35 @@ combineMethodTile MTsumo    t = Tsumo t
 combineMethodTile (MRon d)  t = Ron t d
 
 
--- These parsers parser the remaining closed tiles into intermediate
+-- These parsers parse the remaining closed tiles into intermediate
 -- results, which are different for each "class" of wait (shanpon,
--- tanki, or any of the two-tile waits).
+-- tanki, or any of the two-tile waits). The [Group] are all the closed
+-- groups.
 --
 -- The Int argument is how many groups are needed.
+
+-- | The 'Wait' is always 'Shanpon'
 shanHandP :: Int -> MultiParser Tile ([Group], Wait)
 shanHandP n = (,) <$> count (n - 1) threeParser <*> shanParser
 
+-- | The 'Wait' is always 'Tanki'
 tankiHandP :: Int -> MultiParser Tile ([Group], Wait)
 tankiHandP n = (,) <$> count n threeParser <*> tanParser
 
+-- | The 'Wait' is Kanchan, Penchan, or Ryanmen. This one has Atama separate
+-- since it is not involved in the 'Wait', unlike shanpon or tanki.
 normHandP :: Int -> MultiParser Tile ([Group], Atama, Wait)
 normHandP n =
   (,,) <$> count (n - 1) threeParser
   <*> atamaParser
   <*> threeWParser
 
--- Parser for either three-tile group
+-- | Parser for either three-tile group
 threeParser :: MultiParser Tile Group
 threeParser = kouParser <|> shunParser
 
 
--- Parser for any of the three shuntsu waits
+-- | Parser for any of the three shuntsu waits
 threeWParser :: MultiParser Tile Wait
 threeWParser = ryanParser <|> kanchParser <|> penParser
 
