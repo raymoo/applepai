@@ -92,6 +92,10 @@ data WinTile = Tsumo Tile
              | Ron Tile Direction
              deriving (Eq)
 
+winTileTile :: Lens' WinTile Tile
+winTileTile f (Tsumo t) = Tsumo <$> f t
+winTileTile f (Ron t d) = (\t' -> Ron t' d) <$> f t
+
 instance Show WinTile where
   show (Tsumo t) = show t ++ " tsumo'd"
   show (Ron t d) = show t ++ " from " ++ show d
@@ -161,14 +165,13 @@ testHand2 =
        }
 
 data WinMethod = MTsumo
-               | MRon Direction
+               | MRon Tile Direction
                deriving (Show, Eq)
 
 -- | Utility function. Not exported.
-combineMethodTile :: WinMethod -> Tile -> WinTile
-combineMethodTile MTsumo    t = Tsumo t
-combineMethodTile (MRon d)  t = Ron t d
-
+foldWinMethod :: b -> (Tile -> Direction -> b) -> WinMethod -> b
+foldWinMethod tsumo _    MTsumo     = tsumo
+foldWinMethod _     ronf (MRon t d) = ronf t d
 
 -- These parsers parse the remaining closed tiles into intermediate
 -- results, which are different for each "class" of wait (shanpon,
@@ -221,14 +224,17 @@ tryAgari method hand = fromMaybe [] $ -- Convert the Maybe list of Results to
   map fst . -- We don't want the remaining MultiSet (which should be empty)
 
   -- Get rid of Results that have not used all the tiles
-  (\t -> filter (MS.null . snd) (runParser (allResP t) handSet))
+  (\winT -> filter (MS.null . snd) (runParser (allResP winT) handSet))
 
   -- fmap this onto the possible newTile. It will be Nothing if there isn't an
   -- additional tile (and then it should fail).
-  -- ???: Should I differentiate between newTiles that come from Ron or Tsumo?
-  <$> (hand ^. newTile)
+  <$> agariWinTile
   
-  where -- The set of closed tiles converted to MultiSet, for parsing
+  where -- What was used to win
+        agariWinTile =
+          foldWinMethod (fmap Tsumo $ hand^.newTile) ((Just .) . Ron) method
+
+        -- The set of closed tiles converted to MultiSet, for parsing
         handSet = MS.fromList . map snd . IM.toList $ (hand ^.closedTiles)
 
         -- How many groups we need to make. 4 - groups already declared
@@ -239,37 +245,39 @@ tryAgari method hand = fromMaybe [] $ -- Convert the Maybe list of Results to
         shanResP new = catMaybeParse $ waitingFinishSh new <$> shanHandP remGroups
         tankiResP new = catMaybeParse $ waitingFinishTan new <$> tankiHandP remGroups
         normResP new = catMaybeParse $ waitingFinishNorm new <$> normHandP remGroups
-        allResP new = shanResP new <|> tankiResP new <|> normResP new
+        allResP winTile = shanResP winTile
+                      <|> tankiResP winTile
+                      <|> normResP winTile
 
         -- These functions take the output of the HandPs and creates Result
         -- values from them (and the tile in-hand)
-        waitingFinishSh tile (groups, wait) =
-          case shanponCheck tile wait of
+        waitingFinishSh wintile (groups, wait) =
+          case shanponCheck (wintile^.winTileTile) wait of
            Just (ata, group) -> Just
              Result { _resWait    = wait
-                    , _resWinTile = combineMethodTile method tile
+                    , _resWinTile = wintile
                     , _resOpens   = hand ^.openGroups
                     , _resCloseds = hand ^.closedGroups ++ groups
                     , _resAtama   = Just ata
                     , _resWin     = Right group
                     } 
            Nothing -> Nothing
-        waitingFinishTan tile (groups, wait) =
-          case tankiCheck tile wait of
+        waitingFinishTan wintile (groups, wait) =
+          case tankiCheck (wintile^.winTileTile) wait of
            Just ata -> Just
              Result { _resWait    = wait
-                    , _resWinTile = combineMethodTile method tile
+                    , _resWinTile = wintile
                     , _resOpens   = hand ^.openGroups
                     , _resCloseds = hand ^.closedGroups ++ groups
                     , _resAtama   = Nothing
                     , _resWin     = Left ata
                     } 
            Nothing  -> Nothing
-        waitingFinishNorm tile (groups, ata, wait) =
-          case waitToGroup tile wait of
+        waitingFinishNorm wintile (groups, ata, wait) =
+          case waitToGroup (wintile^.winTileTile) wait of
            Just group  -> Just
              Result { _resWait    = wait
-                    , _resWinTile = combineMethodTile method tile
+                    , _resWinTile = wintile
                     , _resOpens   = hand ^.openGroups
                     , _resCloseds = hand ^.closedGroups ++ groups
                     , _resAtama   = Just ata
