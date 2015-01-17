@@ -18,6 +18,7 @@ module Mahjong.Player.Hand (
               -- ** Query
             , getHandTiles
             , wellFormed
+            , handWaits
               -- ** Lenses
             , newTile
             , closedTiles
@@ -168,6 +169,44 @@ combineMethodTile :: WinMethod -> Tile -> WinTile
 combineMethodTile MTsumo    t = Tsumo t
 combineMethodTile (MRon d)  t = Ron t d
 
+
+-- These parsers parser the remaining closed tiles into intermediate
+-- results, which are different for each "class" of wait (shanpon,
+-- tanki, or any of the two-tile waits).
+--
+-- The Int argument is how many groups are needed.
+shanHandP :: Int -> MultiParser Tile ([Group], Wait)
+shanHandP n = (,) <$> count (n - 1) threeParser <*> shanParser
+
+tankiHandP :: Int -> MultiParser Tile ([Group], Wait)
+tankiHandP n = (,) <$> count n threeParser <*> tanParser
+
+normHandP :: Int -> MultiParser Tile ([Group], Atama, Wait)
+normHandP n =
+  (,,) <$> count (n - 1) threeParser
+  <*> atamaParser
+  <*> threeWParser
+
+-- Parser for either three-tile group
+threeParser :: MultiParser Tile Group
+threeParser = kouParser <|> shunParser
+
+
+-- Parser for any of the three shuntsu waits
+threeWParser :: MultiParser Tile Wait
+threeWParser = ryanParser <|> kanchParser <|> penParser
+
+-- | Get the waits for a hand, ignoring any new tile that may have been drawn
+handWaits :: Hand -> [Wait]
+handWaits hand =
+  let results = runParser (shanParse <|> tanParse <|> normParse) remTiles
+  in map fst . filter (MS.null . snd) $ results
+  where needed = 4 - hand^.openGroups.to length
+        shanParse = snd <$> shanHandP needed
+        tanParse = snd <$> tankiHandP needed
+        normParse = view _3 <$> normHandP needed
+        remTiles = MS.fromList $ hand^..closedTiles.traverse
+
 -- | Try to create valid 'Result's from this 'Hand'.
 tryAgari :: WinMethod -> Hand -> [Result]
 tryAgari method hand = fromMaybe [] $ -- Convert the Maybe list of Results to
@@ -190,26 +229,10 @@ tryAgari method hand = fromMaybe [] $ -- Convert the Maybe list of Results to
         remGroups =
           4 - hand ^.openGroups.to length - hand ^.closedGroups.to length
 
-        -- Parser for either three-tile group
-        threeParser = kouParser <|> shunParser
-
-        -- Parser for any of the three shuntsu waits
-        threeWParser = ryanParser <|> kanchParser <|> penParser
-
-        -- These parsers parser the remaining closed tiles into intermediate
-        -- results, which are different for each "class" of wait (shanpon,
-        -- tanki, or any of the two-tile waits)
-        shanHandP = (,) <$> count (remGroups - 1) threeParser <*> shanParser
-        tankiHandP = (,) <$> count remGroups threeParser <*> tanParser
-        normHandP =
-          (,,) <$> count (remGroups - 1) threeParser
-               <*> atamaParser
-               <*> threeWParser
-
         -- These parsers parse the remaining closed tiles into results
-        shanResP new = catMaybeParse $ waitingFinishSh new <$> shanHandP
-        tankiResP new = catMaybeParse $ waitingFinishTan new <$> tankiHandP
-        normResP new = catMaybeParse $ waitingFinishNorm new <$> normHandP
+        shanResP new = catMaybeParse $ waitingFinishSh new <$> shanHandP remGroups
+        tankiResP new = catMaybeParse $ waitingFinishTan new <$> tankiHandP remGroups
+        normResP new = catMaybeParse $ waitingFinishNorm new <$> normHandP remGroups
         allResP new = shanResP new <|> tankiResP new <|> normResP new
 
         -- These functions take the output of the HandPs and creates Result
