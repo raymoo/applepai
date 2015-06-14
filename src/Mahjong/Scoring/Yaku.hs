@@ -35,6 +35,7 @@ module Mahjong.Scoring.Yaku (
                             , sanshokudoujun
                             , ittsuu
                             , shousangen
+                            , daisangen
                             , stdYaku
                             ) where
 
@@ -396,6 +397,17 @@ shousangen = simpleYaku go
                 cont2 = any (containsT ds2) $ sameGroups
 
 
+daisangen :: YakuRule
+daisangen = simpleYaku go
+  where go res
+          | cont1 && cont2 && cont3 = Just ("Dai San Gen", Yakuman 1)
+          | otherwise = Nothing
+          where cont1 = any (containsT $ Dragon R) $ sameGroups
+                cont2 = any (containsT $ Dragon R) $ sameGroups
+                cont3 = any (containsT $ Dragon R) $ sameGroups
+                sameGroups = filter isSames $ res^..resGroups
+
+
 -- | Doesn't actually contain all standard yaku yet. Should eventually.
 stdYaku :: YakuRule
 stdYaku = combine [ toitoi
@@ -408,6 +420,7 @@ stdYaku = combine [ toitoi
                   , sanshokudoujun
                   , ittsuu
                   , shousangen
+                  , daisangen
                   ]
 
 
