@@ -48,7 +48,7 @@ import           Parse.MultiSet
 
 -- | Mahjong groups
 -- Don't use these constructors to create groups - this is unsafe, since you
--- might make invalid Groups.
+-- might make invalid 'Group's.
 data Group = Shun Tile Tile Tile
            | Kou Tile Tile Tile
            | Kan Tile Tile Tile Tile
@@ -66,6 +66,7 @@ data GroupType = Pair
                | Shuntsu
                | Koutsu
                | Kantsu
+               deriving (Show, Eq)
 
 groupType :: Group -> GroupType
 groupType Shun{}  = Shuntsu
