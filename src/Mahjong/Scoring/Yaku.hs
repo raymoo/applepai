@@ -162,7 +162,7 @@ honrou = simpleYaku go
 chinrou :: YakuRule
 chinrou = simpleYaku go
   where go res
-          | and (res^..resGroups.groupTiles.to isEdge) = Just ("Chin Rou Tou", YakuNorm 6)
+          | and (res^..resGroups.groupTiles.to isEdge) = Just ("Chin Rou Tou", Yakuman 1)
           | otherwise = Nothing
 
 routou :: YakuRule
@@ -208,8 +208,6 @@ ryanpei = nPei 2
 pei :: YakuRule
 pei = MutEx [iipei, ryanpei]
 
-
-sanshoku
 
 -- | Doesn't actually contain all standard yaku yet
 stdYaku :: YakuRule
