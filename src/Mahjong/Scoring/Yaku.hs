@@ -18,6 +18,9 @@ module Mahjong.Scoring.Yaku (
                             , findYaku
                               -- ** Examples
                             , dragon
+                            , jifuu
+                            , bafuu
+                            , yakuhai
                             , sanankou
                             , toitoi
                             , honrou
@@ -134,12 +137,16 @@ toitoi = simpleYaku go
           | otherwise                        = Nothing
   
 
+containsT :: Tile -> Group -> Bool
+containsT t g = t `elem` g^..groupTiles
+
+
 -- | Helper function for creating dragon yakuhai yaku
 colorDragon :: String -> DColor -> YakuRule
 colorDragon name col = simpleYaku $ \res ->
   let dCount = counter (res^..resGroups)
   in if dCount == 0 then Nothing else Just (name, YakuNorm dCount)
-  where contD = (> 0) . length . (filter (== Dragon col)) . getGroupTiles
+  where contD = containsT (Dragon col)
         counter = length . filter contD
 
 greenDragon :: YakuRule
@@ -155,6 +162,32 @@ whiteDragon = colorDragon "Haku" H
 -- | Covers the different dragon yakuhai
 dragon :: YakuRule
 dragon = Combine [greenDragon, redDragon, whiteDragon]
+
+
+-- | Self Wind
+jifuu :: YakuRule
+jifuu = Yaku go
+  where go (YakuContext pd _ _ res)
+          | numGs > 0 = Just ("Self Wind", YakuNorm numGs)
+          | otherwise = Nothing
+          where contW = containsT (Wind pd)
+                -- Should be 1 at max - only four of each wind in play
+                numGs = length . filter contW $ res^..resGroups
+
+
+-- | Table Wind
+bafuu :: YakuRule
+bafuu = Yaku go
+  where go (YakuContext _ td _ res)
+          | numGs > 0 = Just ("Self Wind", YakuNorm numGs)
+          | otherwise = Nothing
+          where contW = containsT (Wind td)
+                -- Should be 1 at max - only four of each wind in play
+                numGs = length . filter contW $ res^..resGroups
+
+-- | All yakuhai
+yakuhai :: YakuRule
+yakuhai = Combine [dragon, jifuu, bafuu]
 
 
 -- | Helper function for seeing if a group is some type
@@ -229,10 +262,12 @@ nPei name n = simpleYaku go
         duplicates xs = filter (> 1) . map length . group $ xs
         nDup xs = length (duplicates xs) == n
 
-
+-- | iipeikou
 iipei :: YakuRule
 iipei = nPei "Ii Pei Kou" 1
 
+
+-- | ryanpeikou
 ryanpei :: YakuRule
 ryanpei = nPei "Ryan Pei Kou" 2
 
@@ -321,7 +356,7 @@ ittsuu = simpleYaku $ go
 -- | Doesn't actually contain all standard yaku yet. Should eventually.
 stdYaku :: YakuRule
 stdYaku = Combine [ toitoi
-                  , dragon
+                  , yakuhai
                   , sanankou
                   , routou
                   , suuankou
