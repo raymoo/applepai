@@ -1,3 +1,5 @@
+{-# LANGUAGE MultiParamTypeClasses #-}
+
 {-|
 Module      : Mahjong.Group
 Description : Groups of mahjong tiles
@@ -57,6 +59,15 @@ data Group = Shun Tile Tile Tile
 -- | Pairs are a separate data type, because they are pretty different
 data Atama = Atama Tile Tile
            deriving (Show, Eq, Ord)
+
+
+instance Field1 Atama Atama Tile Tile where
+  _1 f (Atama t1 t2) = (\t1' -> Atama t1' t2) <$> f t1
+
+
+instance Field2 Atama Atama Tile Tile where
+  _2 f (Atama t1 t2) = (\t2' -> Atama t1 t2') <$> f t2
+
 
 instance Show Group where
   show g = intercalate "-" $ g^..groupTiles.(to show)
