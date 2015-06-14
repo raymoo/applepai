@@ -20,6 +20,9 @@ module Mahjong.Tile (
                       -- * Tile information
                     , getTileSuit
                     , getTileNum
+                    , isEdge
+                    , isHonor
+                    , tileWind
                       -- * Generation
                     , getSuitTiles
                     , getNumTiles
@@ -183,3 +186,17 @@ tileSuit f = \t -> coerce $ f $ getTileSuit t
 -- | 'Fold' for the tiles with a 'TSuit'
 suitTiles :: Fold TSuit Tile
 suitTiles f = \s -> coerce $ traverse f (getSuitTiles s)
+
+
+isEdge :: Tile -> Bool
+isEdge (NumT _ n) = n == One || n == Nine
+isEdge _          = False
+
+
+isHonor :: Tile -> Bool
+isHonor t = getTileSuit t == Honor
+
+
+tileWind :: Tile -> Maybe Direction
+tileWind (Wind d) = Just d
+tileWind _        = Nothing
