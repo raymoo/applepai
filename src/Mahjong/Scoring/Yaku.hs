@@ -34,6 +34,7 @@ module Mahjong.Scoring.Yaku (
                             , ryanpei
                             , sanshokudoujun
                             , ittsuu
+                            , shousangen
                             , stdYaku
                             ) where
 
@@ -266,7 +267,7 @@ pinfu = yaku go
             and (yc^..ycRes.resGroups.to isShuntsu) &&
             isClosed (yc^.ycRes) &&
             none (`elem` [yc^.ycPlayerWind, yc^.ycTableWind])
-                 (yc^..ycRes.resAtama.traverse.atamaTiles.to tileWind.traverse) =
+                 (yc^..ycRes.resMAtama.traverse.atamaTiles.to tileWind.traverse) =
               Just ("Pinfu", YakuNorm 1)
           | otherwise = Nothing
         isShuntsu Shun{} = True
@@ -377,6 +378,24 @@ ittsuu = simpleYaku $ go
                   return choice
 
 
+shousangen :: YakuRule
+shousangen = simpleYaku go
+  where otherTwo R = (G, H)
+        otherTwo G = (R, H)
+        otherTwo H = (R, G)
+        go res =
+          case res^.resAtama._1 of
+           (Dragon c) -> go' res c
+           _ -> Nothing
+        go' res c
+          | cont1 && cont2 = Just ("Shou San Gen", YakuNorm 2)
+          | otherwise = Nothing
+          where (ds1, ds2) = otherTwo c & both %~ Dragon
+                sameGroups = filter isSames $ res^..resGroups
+                cont1 = any (containsT ds1) $ sameGroups
+                cont2 = any (containsT ds2) $ sameGroups
+
+
 -- | Doesn't actually contain all standard yaku yet. Should eventually.
 stdYaku :: YakuRule
 stdYaku = combine [ toitoi
@@ -388,6 +407,7 @@ stdYaku = combine [ toitoi
                   , pei
                   , sanshokudoujun
                   , ittsuu
+                  , shousangen
                   ]
 
 
@@ -400,7 +420,7 @@ testRes = Result { _resWait = Ryanmen (NumT Sou Two) (NumT Sou Three)
                                  , Shun (NumT Pin Two) (NumT Pin Three) (NumT Pin Four)
                                  , Shun (NumT Sou Six) (NumT Sou Seven) (NumT Sou Eight)
                                  ]
-                 , _resAtama = Just (Atama (Wind S) (Wind S))
+                 , _resMAtama = Just (Atama (Wind S) (Wind S))
                  , _resWin = Right (Shun (NumT Sou Two) (NumT Sou Three) (NumT Sou Four))
                  } 
 

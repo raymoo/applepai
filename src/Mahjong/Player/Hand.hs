@@ -38,8 +38,9 @@ module Mahjong.Player.Hand (
             , resWinTile
             , resOpens
             , resCloseds
-            , resAtama
+            , resMAtama
             , resWin
+            , resAtama
             , resGroups
             , resAllClosedGroups
               -- * Testing
@@ -110,12 +111,20 @@ data Result =
          , _resWinTile :: WinTile
          , _resOpens   :: [(Group, Seat)]
          , _resCloseds :: [Group]
-         , _resAtama   :: Maybe Atama -- ^ Might have won by atama
+         , _resMAtama  :: Maybe Atama -- ^ Might have won by atama
          , _resWin     :: Either Atama Group -- ^ What was won by
          }
   deriving (Eq)
 
 makeLenses ''Result
+
+resAtama :: Lens' Result Atama
+resAtama f res =
+  case res^.resMAtama of
+   Just ata -> (\a -> res & resMAtama .~ Just a) <$> f ata
+   -- Dangerous, but res should have atama in win if it went here
+   Nothing ->
+     (\a -> res & resWin .~ Left a) <$> f (either id (error "Shouldn't happen (resAtama)") (res^.resWin))
 
 resGroups :: Fold Result Group
 resGroups f = \res ->
@@ -138,7 +147,7 @@ instance Show Result where
     "Closed: "
     ++ show (res ^. resCloseds)
     ++ " "
-    ++ maybe "" show (res ^. resAtama)
+    ++ maybe "" show (res ^. resMAtama)
     ++ " Open: "
     ++ show (res ^. resOpens)
     ++ " Wait: "
@@ -286,7 +295,7 @@ tryAgari method hand = fromMaybe [] $ -- Convert the Maybe list of Results to
                     , _resWinTile = wintile
                     , _resOpens   = hand ^.openGroups
                     , _resCloseds = hand ^.closedGroups ++ groups
-                    , _resAtama   = Just ata
+                    , _resMAtama  = Just ata
                     , _resWin     = Right group
                     } 
            Nothing -> Nothing
@@ -297,7 +306,7 @@ tryAgari method hand = fromMaybe [] $ -- Convert the Maybe list of Results to
                     , _resWinTile = wintile
                     , _resOpens   = hand ^.openGroups
                     , _resCloseds = hand ^.closedGroups ++ groups
-                    , _resAtama   = Nothing
+                    , _resMAtama  = Nothing
                     , _resWin     = Left ata
                     } 
            Nothing  -> Nothing
@@ -308,7 +317,7 @@ tryAgari method hand = fromMaybe [] $ -- Convert the Maybe list of Results to
                     , _resWinTile = wintile
                     , _resOpens   = hand ^.openGroups
                     , _resCloseds = hand ^.closedGroups ++ groups
-                    , _resAtama   = Just ata
+                    , _resMAtama  = Just ata
                     , _resWin     = Right group
                     }
            Nothing -> Nothing
