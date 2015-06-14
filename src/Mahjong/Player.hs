@@ -26,6 +26,7 @@ module Mahjong.Player (
                       , hand
                       , wind
                       , river
+                      , lastDiscard
                       , discard
                         -- * Debug
                       , testPlayer
@@ -41,6 +42,7 @@ import           Mahjong.Player.Hand
 data Player = Player { _hand  :: Hand
                      , _wind  :: Seat
                      , _river :: MS.MultiSet Tile
+                     , _lastDiscard :: Maybe Tile
                      } deriving (Show)
 
 makeLenses ''Player
@@ -61,4 +63,5 @@ testPlayer :: Player
 testPlayer = Player { _hand  = testHand
                     , _wind  = S
                     , _river = MS.fromList $ [NumT Sou Seven, NumT Sou Eight]
+                    , _lastDiscard = (Just $ NumT Sou Five)
                     }
