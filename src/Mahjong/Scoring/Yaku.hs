@@ -1,10 +1,14 @@
+{-# LANGUAGE DeriveFunctor #-}
 {-# LANGUAGE MultiWayIf #-}
 {-# LANGUAGE TemplateHaskell #-}
 module Mahjong.Scoring.Yaku (
                               -- * Yaku
-                              YakuRule(..)
+                              YakuRule
                             , YakuResult(..)
                             , YakuContext(..)
+                            , yaku
+                            , mutEx
+                            , combine
                             , simpleYaku
                              -- ** Lenses
                             , ycPlayerWind
@@ -38,6 +42,7 @@ import Control.Monad
 import Control.Lens
 import Data.Function
 import Data.List (maximumBy, foldl', group, nub)
+import Data.Functor.Foldable hiding (Foldable)
 
 import Mahjong.Player.Hand
 import Mahjong.Group
@@ -58,12 +63,27 @@ makeLenses ''YakuContext
 
 -- | A rule for determining Han. Semantically, is a function from 'Result's to
 -- a list of pairs of yaku names and han values, in addition to a total value
-data YakuRule = Yaku (YakuContext -> Maybe (String, YakuValue))
-              | MutEx [YakuRule]   -- ^ Mutually exclusive rules.
-                                   -- The result should be the first of the maximal
-                                   -- values.
-              | Combine [YakuRule] -- ^ Every rule applies, so all the results come
-                                   -- together.
+data RulePiece a = Yaku (YakuContext -> Maybe (String, YakuValue))
+                 | MutEx [a]
+                 | Combine [a]
+                 deriving (Functor)
+
+
+type YakuRule = Fix RulePiece
+
+
+-- | A normal yaku, taking in information and spitting out scoring data
+yaku :: (YakuContext -> Maybe (String, YakuValue)) -> YakuRule
+yaku = Fix . Yaku
+
+
+-- | Mutually exclusive rules, selecting the highest score, left biased.
+mutEx :: [YakuRule] -> YakuRule
+mutEx = Fix . MutEx
+
+
+combine :: [YakuRule] -> YakuRule
+combine = Fix . Combine
 
 
 -- | The value of a yaku. 'YakuNorm' is for normal yaku with a han value, while
@@ -95,18 +115,22 @@ emptyRes :: YakuResult
 emptyRes = YakuResult 0 0 []
 
 
+findPiece :: YakuContext -> RulePiece YakuResult -> YakuResult
+findPiece yc (Yaku f) = case f yc of
+                         Nothing -> emptyRes
+                         Just res@(_, YakuNorm han) -> YakuResult 0 han [res]
+                         Just res@(_, Yakuman ym)   -> YakuResult ym 0 [res]
+findPiece _ (MutEx yrs) =
+  let makeComp yr = [yr^.yrYakuman, yr^.yrTotal]
+  in maximumBy (compare `on` makeComp) (emptyRes : yrs)
+findPiece _ (Combine yrs) = foldl' addResults emptyRes yrs
+                         
+
+
 -- | Determines the best-scoring combination of yaku using a particular scoring
 -- scheme and the required 'YakuContext'
 findYaku :: YakuRule -> YakuContext -> YakuResult
-findYaku (Yaku f) yc =
-  case f yc of
-   Nothing -> YakuResult 0 0 []
-   Just res@(_, YakuNorm han)  -> YakuResult 0 han [res]
-   Just res@(_, Yakuman  ym) -> YakuResult ym 0 [res]
-findYaku (MutEx ys) yc =
-  let makeComp yr = [yr^.yrYakuman, yr^.yrTotal]
-  in maximumBy (compare `on` makeComp) . map (flip findYaku yc) $ ys
-findYaku (Combine ys) yc = foldl' addResults emptyRes . map (flip findYaku yc) $ ys
+findYaku yr yc = cata (findPiece yc) yr
   
 
 -- | Helper function for determining if a hand is closed
@@ -126,7 +150,7 @@ isSames = (||) <$> isGroupType Kantsu <*> isGroupType Koutsu
 
 -- | If a rule only needs to check the 'Result', use this combinator
 simpleYaku :: (Result -> Maybe (String, YakuValue)) -> YakuRule
-simpleYaku f = Yaku $ \yc -> f $ yc^.ycRes
+simpleYaku f = yaku $ \yc -> f $ yc^.ycRes
 
 
 -- | Toitoi rule
@@ -161,12 +185,12 @@ whiteDragon = colorDragon "Haku" H
 
 -- | Covers the different dragon yakuhai
 dragon :: YakuRule
-dragon = Combine [greenDragon, redDragon, whiteDragon]
+dragon = combine [greenDragon, redDragon, whiteDragon]
 
 
 -- | Self Wind
 jifuu :: YakuRule
-jifuu = Yaku go
+jifuu = yaku go
   where go (YakuContext pd _ _ res)
           | numGs > 0 = Just ("Self Wind", YakuNorm numGs)
           | otherwise = Nothing
@@ -177,7 +201,7 @@ jifuu = Yaku go
 
 -- | Table Wind
 bafuu :: YakuRule
-bafuu = Yaku go
+bafuu = yaku go
   where go (YakuContext _ td _ res)
           | numGs > 0 = Just ("Self Wind", YakuNorm numGs)
           | otherwise = Nothing
@@ -187,7 +211,7 @@ bafuu = Yaku go
 
 -- | All yakuhai
 yakuhai :: YakuRule
-yakuhai = Combine [dragon, jifuu, bafuu]
+yakuhai = combine [dragon, jifuu, bafuu]
 
 
 -- | Helper function for seeing if a group is some type
@@ -226,7 +250,7 @@ chinrou = simpleYaku go
 
 -- | Chinroutou and Honroutou rule
 routou :: YakuRule
-routou = MutEx [honrou, chinrou]
+routou = mutEx [honrou, chinrou]
 
 
 -- | Suuankou rule
@@ -236,7 +260,7 @@ suuankou = nAnkou "Suu An Kou" (Yakuman 1) 4
 
 -- | Pinfu rule
 pinfu :: YakuRule
-pinfu = Yaku go
+pinfu = yaku go
   where go yc
           | yc^.ycRes.resWait.to isRyanmen &&
             and (yc^..ycRes.resGroups.to isShuntsu) &&
@@ -274,7 +298,7 @@ ryanpei = nPei "Ryan Pei Kou" 2
 
 -- | Covers iipeikou and ryanpeikou
 pei :: YakuRule
-pei = MutEx [iipei, ryanpei]
+pei = mutEx [iipei, ryanpei]
 
 
 -- | Helper function, gets view of a list where one element is cut out. Order
@@ -355,7 +379,7 @@ ittsuu = simpleYaku $ go
 
 -- | Doesn't actually contain all standard yaku yet. Should eventually.
 stdYaku :: YakuRule
-stdYaku = Combine [ toitoi
+stdYaku = combine [ toitoi
                   , yakuhai
                   , sanankou
                   , routou
