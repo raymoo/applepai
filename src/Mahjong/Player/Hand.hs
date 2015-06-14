@@ -29,7 +29,9 @@ module Mahjong.Player.Hand (
             , Result(..)
             , WinMethod(..)
             , WinTile(..)
-              -- * Winning
+              -- ** Query
+            , winTileMethod
+              -- ** Winning
             , tryAgari
               -- ** Lenses
             , resWait
@@ -38,6 +40,8 @@ module Mahjong.Player.Hand (
             , resCloseds
             , resAtama
             , resWin
+            , resGroups
+            , resAllClosedGroups
               -- * Testing
             , testHand
             , testHand2
@@ -96,6 +100,7 @@ winTileTile :: Lens' WinTile Tile
 winTileTile f (Tsumo t) = Tsumo <$> f t
 winTileTile f (Ron t d) = (\t' -> Ron t' d) <$> f t
 
+
 instance Show WinTile where
   show (Tsumo t) = show t ++ " tsumo'd"
   show (Ron t d) = show t ++ " from " ++ show d
@@ -111,6 +116,22 @@ data Result =
   deriving (Eq)
 
 makeLenses ''Result
+
+resGroups :: Fold Result Group
+resGroups f = \res ->
+  let groups = oGroups ++ cGroups ++ wGroup
+      oGroups = map fst $ res^.resOpens
+      cGroups = res^.resCloseds
+      wGroup = res^..resWin._Right
+  in coerce (traverse f groups)
+
+resAllClosedGroups :: Fold Result Group
+resAllClosedGroups f = \res ->
+  let cGroups = res^.resCloseds
+      wGroup = case res^.resWinTile.to winTileMethod of
+                MTsumo -> res^..resWin._Right
+                MRon _ _ -> []
+  in coerce $ traverse f (wGroup ++ cGroups)
 
 instance Show Result where
   show res =
@@ -167,6 +188,13 @@ testHand2 =
 data WinMethod = MTsumo
                | MRon Tile Direction
                deriving (Show, Eq)
+
+
+
+winTileMethod :: WinTile -> WinMethod
+winTileMethod (Tsumo _) = MTsumo
+winTileMethod (Ron t d) = MRon t d
+
 
 -- | Utility function. Not exported.
 foldWinMethod :: b -> (Tile -> Direction -> b) -> WinMethod -> b
