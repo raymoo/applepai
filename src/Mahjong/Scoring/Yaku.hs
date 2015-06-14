@@ -26,6 +26,7 @@ module Mahjong.Scoring.Yaku (
                             , iipei
                             , ryanpei
                             , sanshokudoujun
+                            , ittsuu
                             , stdYaku
                             ) where
 
@@ -41,6 +42,7 @@ import Mahjong.Tile
 import Mahjong.Group.Wait
 
 
+-- | The data yaku operate on
 data YakuContext = YakuContext { _ycPlayerWind :: Direction
                                , _ycTableWind :: Direction
                                , _ycRiichi :: Bool
@@ -61,11 +63,15 @@ data YakuRule = Yaku (YakuContext -> Maybe (String, YakuValue))
                                    -- together.
 
 
+-- | The value of a yaku. 'YakuNorm' is for normal yaku with a han value, while
+-- 'Yakuman' is for yakuman hands. It is parametrized by an 'Int' just in case
+-- you have double yakuman hands or similar things.
 data YakuValue = YakuNorm Int
                | Yakuman  Int
                deriving (Show, Eq, Ord)
 
 
+-- | The result of searching for yaku.
 data YakuResult = YakuResult { _yrYakuman :: Int
                              , _yrTotal :: Int
                              , _yrPairs :: [(String, YakuValue)]
@@ -75,14 +81,19 @@ data YakuResult = YakuResult { _yrYakuman :: Int
 makeLenses ''YakuResult
 
 
+-- | Helper function that merges two 'YakuResult's
 addResults :: YakuResult -> YakuResult -> YakuResult
 addResults (YakuResult ym1 t1 ps1) (YakuResult ym2 t2 ps2) =
   YakuResult (ym1 + ym2) (t1 + t2) (ps1 ++ ps2)
 
+
+-- | Result where no yaku are found
 emptyRes :: YakuResult
 emptyRes = YakuResult 0 0 []
 
 
+-- | Determines the best-scoring combination of yaku using a particular scoring
+-- scheme and the required 'YakuContext'
 findYaku :: YakuRule -> YakuContext -> YakuResult
 findYaku (Yaku f) yc =
   case f yc of
@@ -95,20 +106,25 @@ findYaku (MutEx ys) yc =
 findYaku (Combine ys) yc = foldl' addResults emptyRes . map (flip findYaku yc) $ ys
   
 
+-- | Helper function for determining if a hand is closed
 isClosed :: Result -> Bool
 isClosed res = length (res^..resGroups) == length (res^..resAllClosedGroups)
 
 
+-- | Similar, for openness
 isOpen :: Result -> Bool
 isOpen = not . isClosed
 
 
+-- | Is it a group of the same kind of tile?
 isSames :: Group -> Bool
 isSames = (||) <$> isGroupType Kantsu <*> isGroupType Koutsu
 
 
+-- | If a rule only needs to check the 'Result', use this combinator
 simpleYaku :: (Result -> Maybe (String, YakuValue)) -> YakuRule
 simpleYaku f = Yaku $ \yc -> f $ yc^.ycRes
+
 
 -- | Toitoi rule
 toitoi :: YakuRule
@@ -118,7 +134,7 @@ toitoi = simpleYaku go
           | otherwise                        = Nothing
   
 
-
+-- | Helper function for creating dragon yakuhai yaku
 colorDragon :: String -> DColor -> YakuRule
 colorDragon name col = simpleYaku $ \res ->
   let dCount = counter (res^..resGroups)
@@ -135,20 +151,26 @@ redDragon = colorDragon "Chun" R
 whiteDragon :: YakuRule
 whiteDragon = colorDragon "Haku" H
 
+
+-- | Covers the different dragon yakuhai
 dragon :: YakuRule
 dragon = Combine [greenDragon, redDragon, whiteDragon]
 
 
+-- | Helper function for seeing if a group is some type
 isGroupType :: GroupType -> Group -> Bool
 isGroupType gt g = groupType g == gt
 
 
+-- | Helper function to create ankou groups.
 nAnkou :: String -> YakuValue -> Int -> YakuRule
 nAnkou name yv n = simpleYaku $ \res ->
   let count = numKouKan (res^..resAllClosedGroups)
   in if count >= n then Just (name, yv) else Nothing
   where numKouKan gs = length (filter isSames gs)
 
+
+-- | Sanankou rule
 sanankou :: YakuRule
 sanankou = nAnkou "San An Kou" (YakuNorm 2) 3
 
@@ -168,14 +190,18 @@ chinrou = simpleYaku go
           | and (res^..resGroups.groupTiles.to isEdge) = Just ("Chin Rou Tou", Yakuman 1)
           | otherwise = Nothing
 
+
+-- | Chinroutou and Honroutou rule
 routou :: YakuRule
 routou = MutEx [honrou, chinrou]
 
 
+-- | Suuankou rule
 suuankou :: YakuRule
 suuankou = nAnkou "Suu An Kou" (Yakuman 1) 4
 
 
+-- | Pinfu rule
 pinfu :: YakuRule
 pinfu = Yaku go
   where go yc
@@ -192,6 +218,7 @@ pinfu = Yaku go
         isRyanmen _         = False
 
 
+-- | Helper function for iipei and ryanpei
 nPei :: String -> Int -> YakuRule
 nPei name n = simpleYaku go
   where go res
@@ -202,22 +229,29 @@ nPei name n = simpleYaku go
         duplicates xs = filter (> 1) . map length . group $ xs
         nDup xs = length (duplicates xs) == n
 
+
 iipei :: YakuRule
 iipei = nPei "Ii Pei Kou" 1
 
 ryanpei :: YakuRule
 ryanpei = nPei "Ryan Pei Kou" 2
 
+
+-- | Covers iipeikou and ryanpeikou
 pei :: YakuRule
 pei = MutEx [iipei, ryanpei]
 
 
+-- | Helper function, gets view of a list where one element is cut out. Order
+-- is not defined.
 splices :: [a] -> [(a,[a])]
 splices = go []
   where go _  [] = []
         go xs (y:ys) = (y, xs ++ ys) : go (y:xs) ys
 
 
+-- | Gets different choices of numbers of elements from a list. Order is not
+-- defined.
 chooses :: Int -> [a] -> [[a]]
 chooses 0 _  = [[]]
 chooses n xs
@@ -239,6 +273,7 @@ ident [] = True
 ident xs = length (nub xs) == 1
 
 
+-- | Sanshoku Doujun rule
 sanshokudoujun :: YakuRule
 sanshokudoujun = simpleYaku $ go
   where diffColors gs = uniq . map (getTileSuit . head . toListOf groupTiles) $ gs
@@ -246,7 +281,7 @@ sanshokudoujun = simpleYaku $ go
         go res
           | not . null $ groupOfGroups = Just ("San Shoku Dou Jun", YakuNorm score)
           | otherwise = Nothing
-          where shunGroups = filter (\g -> groupType g == Shuntsu) $ res^..resGroups
+          where shunGroups = filter (isGroupType Shuntsu) $ res^..resGroups
                 score
                   | isOpen res = 1
                   | otherwise = 2
@@ -257,7 +292,33 @@ sanshokudoujun = simpleYaku $ go
                   return choice
 
 
--- | Doesn't actually contain all standard yaku yet
+-- | Ikki Tsuukan
+ittsuu :: YakuRule
+ittsuu = simpleYaku $ go
+  where go res
+          | null goodGroups = Nothing
+          | otherwise = Just ("Ikki Tsuu Kan", score)
+          where shunGroups = filter (isGroupType Shuntsu) $ res^..resGroups
+                sameColor gs = ident . map (getTileSuit . head . toListOf groupTiles) $ gs
+                onetwothree    = [One .. Three]
+                fourfivesix    = [Four .. Six]
+                seveneightnine = [Seven .. Nine]
+                numSeqs = map (toListOf $ groupTiles.to getTileNum.traverse)
+                isStraight gs = let seqs = numSeqs gs
+                                in onetwothree `elem` seqs &&
+                                   fourfivesix `elem` seqs &&
+                                   seveneightnine `elem` seqs
+                score
+                  | isOpen res = YakuNorm 1
+                  | otherwise = YakuNorm 2
+                goodGroups = do
+                  choice <- chooses 3 shunGroups
+                  guard (sameColor choice)
+                  guard (isStraight choice)
+                  return choice
+
+
+-- | Doesn't actually contain all standard yaku yet. Should eventually.
 stdYaku :: YakuRule
 stdYaku = Combine [ toitoi
                   , dragon
@@ -267,9 +328,11 @@ stdYaku = Combine [ toitoi
                   , pinfu
                   , pei
                   , sanshokudoujun
+                  , ittsuu
                   ]
 
 
+-- | Test result for pinfu and sanshoku
 testRes :: Result
 testRes = Result { _resWait = Ryanmen (NumT Sou Two) (NumT Sou Three)
                  , _resWinTile = Tsumo (NumT Sou Four)
@@ -283,5 +346,6 @@ testRes = Result { _resWait = Ryanmen (NumT Sou Two) (NumT Sou Three)
                  } 
 
 
+-- | Test context for the same as above
 testContext :: YakuContext
 testContext = YakuContext W E True testRes
