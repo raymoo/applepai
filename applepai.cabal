@@ -58,6 +58,7 @@ library
     Mahjong.Group.Wait
     Mahjong.Player
     Mahjong.Player.Hand
+    Mahjong.Scoring.Yaku
 
   ghc-options: -O2 -Wall -fwarn-tabs
   -- Modules included in this library but not exported.
@@ -71,6 +72,7 @@ library
                      , multiset   >=0.2.2 && <0.3
                      , lens       >=4.6   && <4.7
                      , containers >=0.5   && <0.6
+                     , recursion-schemes >= 4.1 && < 4.2
   
   -- Directories containing source files.
   -- hs-source-dirs:      
