@@ -5,6 +5,7 @@ module Mahjong.Scoring.Yaku (
                               YakuRule(..)
                             , YakuResult(..)
                             , YakuContext(..)
+                            , simpleYaku
                              -- ** Lenses
                             , ycPlayerWind
                             , ycRiichi
@@ -24,13 +25,15 @@ module Mahjong.Scoring.Yaku (
                             , pinfu
                             , iipei
                             , ryanpei
+                            , sanshokudoujun
                             , stdYaku
                             ) where
 
 import Control.Applicative ((<$>), (<*>))
+import Control.Monad
 import Control.Lens
 import Data.Function
-import Data.List (maximumBy, foldl', group)
+import Data.List (maximumBy, foldl', group, nub)
 
 import Mahjong.Player.Hand
 import Mahjong.Group
@@ -189,24 +192,69 @@ pinfu = Yaku go
         isRyanmen _         = False
 
 
-nPei :: Int -> YakuRule
-nPei n = simpleYaku go
+nPei :: String -> Int -> YakuRule
+nPei name n = simpleYaku go
   where go res
           | isOpen res = Nothing
           | nDup (res^..resGroups.filtered (\g -> groupType g == Shuntsu)) =
-              Just ("Ii Pei Kou", YakuNorm 1)
+              Just (name, YakuNorm 1)
           | otherwise = Nothing
         duplicates xs = filter (> 1) . map length . group $ xs
         nDup xs = length (duplicates xs) == n
 
 iipei :: YakuRule
-iipei = nPei 1
+iipei = nPei "Ii Pei Kou" 1
 
 ryanpei :: YakuRule
-ryanpei = nPei 2
+ryanpei = nPei "Ryan Pei Kou" 2
 
 pei :: YakuRule
 pei = MutEx [iipei, ryanpei]
+
+
+splices :: [a] -> [(a,[a])]
+splices = go []
+  where go _  [] = []
+        go xs (y:ys) = (y, xs ++ ys) : go (y:xs) ys
+
+
+chooses :: Int -> [a] -> [[a]]
+chooses 0 _  = [[]]
+chooses n xs
+  | n < 0 = []
+  | otherwise = do
+      (one, rest) <- splices xs
+      otherPart <- chooses (n - 1) rest
+      return $ one : otherPart
+
+
+-- | Inefficient, but sufficient for small inputs
+uniq :: Eq a => [a] -> Bool
+uniq xs = length xs == length (nub xs)
+
+
+-- | Basically opposite of uniq
+ident :: Eq a => [a] -> Bool
+ident [] = True
+ident xs = length (nub xs) == 1
+
+
+sanshokudoujun :: YakuRule
+sanshokudoujun = simpleYaku $ go
+  where diffColors gs = uniq . map (getTileSuit . head . toListOf groupTiles) $ gs
+        sameNums gs = ident $ map (toListOf $ groupTiles.to getTileNum.traverse) gs
+        go res
+          | not . null $ groupOfGroups = Just ("San Shoku Dou Jun", YakuNorm score)
+          | otherwise = Nothing
+          where shunGroups = filter (\g -> groupType g == Shuntsu) $ res^..resGroups
+                score
+                  | isOpen res = 1
+                  | otherwise = 2
+                groupOfGroups = do
+                  choice <- chooses 3 shunGroups
+                  guard $ diffColors choice
+                  guard $ sameNums choice
+                  return choice
 
 
 -- | Doesn't actually contain all standard yaku yet
@@ -218,4 +266,22 @@ stdYaku = Combine [ toitoi
                   , suuankou
                   , pinfu
                   , pei
+                  , sanshokudoujun
                   ]
+
+
+testRes :: Result
+testRes = Result { _resWait = Ryanmen (NumT Sou Two) (NumT Sou Three)
+                 , _resWinTile = Tsumo (NumT Sou Four)
+                 , _resOpens = []
+                 , _resCloseds = [ Shun (NumT Man Two) (NumT Man Three) (NumT Man Four)
+                                 , Shun (NumT Pin Two) (NumT Pin Three) (NumT Pin Four)
+                                 , Shun (NumT Sou Six) (NumT Sou Seven) (NumT Sou Eight)
+                                 ]
+                 , _resAtama = Just (Atama (Wind S) (Wind S))
+                 , _resWin = Right (Shun (NumT Sou Two) (NumT Sou Three) (NumT Sou Four))
+                 } 
+
+
+testContext :: YakuContext
+testContext = YakuContext W E True testRes
